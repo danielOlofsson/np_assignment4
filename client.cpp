@@ -26,9 +26,11 @@ int main(int argc, char *argv[])
 
     struct addrinfo hints, *serverinfo, *servaddr;
     fd_set readfds;
-    int recivedValue;
+    int recivedValue = 0;
+    int sendValue  = 0;
     int clientSocket;
-    int choice =-1;
+    int choice = -1;
+    bool isSent = false;
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC; 
@@ -64,6 +66,7 @@ int main(int argc, char *argv[])
     }
     
     char buf[256];
+    char sendMsg[256];
 
     fd_set masterFds;
     FD_ZERO(&readfds);
@@ -75,6 +78,7 @@ int main(int argc, char *argv[])
     {
         readfds = masterFds;
         memset(buf,0,sizeof(buf));
+        memset(sendMsg,0,sizeof(sendMsg));
         
         recivedValue = select(clientSocket +1, &readfds,NULL,NULL,NULL);
         if(recivedValue == -1)
@@ -101,35 +105,43 @@ int main(int argc, char *argv[])
             if(strcmp(buf,"Please select:\n1.Play\n2.Watch\n0.Exit\n") == 0)
             {
                 //Menu text recived
-                printf("%s!",buf);
                 
-                cin >> choice;
-
-                if(choice == 1)
-                {
-                    printf("Play\n");
+                while(isSent == false)
+                {                                    
+                    printf("%s",buf);                    
+                    cin >> choice;
+                    cin.ignore();
+                    
+                    if(choice == 1 || choice == 2)
+                    {
+                        sprintf(sendMsg,"MENU %d\n",choice);
+                        sendValue = send(clientSocket, sendMsg, strlen(sendMsg), 0);
+                        if (sendValue == -1) 
+                        {
+                            perror("sendto:");
+                            break;
+                        }  
+                        isSent = true;                      
+                    }
+                    else if(choice = 0)
+                    {
+                        close(clientSocket);
+                        exit(3);
+                    }
+                    else
+                    {
+                        printf("choose from given options!\n");                                                
+                    }                    
                 }
-                else if(choice == 2)
-                {
-                    printf("Watch\n");
-                }
-                else if(choice == 0)
-                {
-                    printf("Exiting\n");
-                    close(clientSocket);
-                    break;
-                }
-                else
-                {
-                    printf("choose from given options!\n");
-                }
+                isSent = false;
             }
+            
         }
 
-        if(FD_ISSET(STDIN_FILENO,&readfds))
+        /*if(FD_ISSET(STDIN_FILENO,&readfds))
         {
             printf("Stop typing!\n");
-        }
+        }*/
     }
 
 

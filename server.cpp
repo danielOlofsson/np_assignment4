@@ -5,11 +5,11 @@
 #include <sys/types.h>
 #include <netdb.h>
 #include <unistd.h>
-#include <string.h>
 using namespace std;
 
 
-int main(int argc, char *argv[]){
+int main(int argc, char *argv[])
+{
 
     if(argc!=2)
     {
@@ -40,12 +40,14 @@ int main(int argc, char *argv[]){
 
     char buf[256];
     char menuMsg[] = "Please select:\n1.Play\n2.Watch\n0.Exit\n";
+    char operation[256];
 
     memset(buf,0,sizeof(buf));
     
     int yes = 1;
     int recivedValue;
     int sendValue;
+    int choice;
     FD_ZERO(&master);
     FD_ZERO(&read_fds);
 
@@ -99,6 +101,7 @@ int main(int argc, char *argv[]){
     while(1)
     {
         memset(buf,0,sizeof(buf));
+        memset(operation,0,sizeof(operation));
         read_fds = master;
         if(select(maxFds+1,&read_fds,NULL,NULL,NULL) == -1)
         {
@@ -163,12 +166,22 @@ int main(int argc, char *argv[]){
                         }
 
                     }
+                    printf("recived msg: %s",buf);
+                    sscanf(buf,"%s",operation);
+                    if(strcmp(operation, "MENU") == 0)
+                    {
+                        sscanf(buf,"%s %d",operation,choice);
+                    }
+                    else if(strcmp(operation, "tillfällig") == 0)
+                    {
+
+                    }
+                    else
+                    {
+
+                    }
                 }
-
             }
-
-
-
         }
     }
 
