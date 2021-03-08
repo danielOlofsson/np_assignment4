@@ -67,6 +67,8 @@ int main(int argc, char *argv[])
     
     char buf[256];
     char sendMsg[256];
+    char inputMsg[256];
+    char stopQ[] = "STOP\n";
 
     fd_set masterFds;
     FD_ZERO(&readfds);
@@ -100,7 +102,7 @@ int main(int argc, char *argv[])
                 close(clientSocket);
                 break;
             }
-            printf("Message recived: %s",buf);
+            //printf("Message recived: %s",buf);
 
             if(strcmp(buf,"Please select:\n1.Play\n2.Watch\n0.Exit\n") == 0)
             {
@@ -121,9 +123,9 @@ int main(int argc, char *argv[])
                             perror("sendto:");
                             break;
                         }  
-                        isSent = true;                      
+                        isSent = true;                       
                     }
-                    else if(choice = 0)
+                    else if(choice == 0)
                     {
                         close(clientSocket);
                         exit(3);
@@ -135,13 +137,37 @@ int main(int argc, char *argv[])
                 }
                 isSent = false;
             }
-            
-        }
+            else if(strcmp(buf,"One more player requierd to start game\n") == 0)
+            {
+                printf("Type 'EXIT' to leave\n");
+                while(1)
+                {
+                    if(FD_ISSET(clientSocket, &readfds))
+                    {
+                        break;
+                    }
+                    memset(inputMsg,0,sizeof(inputMsg));
+                    fgets(inputMsg, 256, stdin);
 
-        /*if(FD_ISSET(STDIN_FILENO,&readfds))
-        {
-            printf("Stop typing!\n");
-        }*/
+                    if(strcmp(inputMsg,"EXIT\n") == 0)
+                    {
+                        //send msg that you left the queue
+                        sendValue = send(clientSocket, stopQ, strlen(stopQ), 0);
+                        if (sendValue == -1) 
+                        {
+                            perror("sendto:");
+                            exit(4);
+                        }
+                        printf("Sent stop Queue msg\n");
+                        break;
+                    }                
+                }        
+            }
+            else if(strcmp(buf,"Game startig in X\n") == 0)
+            {
+                printf("buf:\n%s",buf);
+            }          
+        }
     }
 
 

@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <iostream>
 using namespace std;
 
 
@@ -32,6 +33,8 @@ int main(int argc, char *argv[])
     int maxFds;
     int listenSocket;
     int acceptFd;
+    int nrOfPlayers = 0;
+    int activeGames = 0;
 
     memset(&hints,0,sizeof(hints));
     hints.ai_socktype = SOCK_STREAM;
@@ -40,6 +43,8 @@ int main(int argc, char *argv[])
 
     char buf[256];
     char menuMsg[] = "Please select:\n1.Play\n2.Watch\n0.Exit\n";
+    char waitingForPlayer[] = "One more player requierd to start game\n";
+    char gameStartingMsg[] = "Game startig in X\n";
     char operation[256];
 
     memset(buf,0,sizeof(buf));
@@ -47,7 +52,9 @@ int main(int argc, char *argv[])
     int yes = 1;
     int recivedValue;
     int sendValue;
-    int choice;
+    int choice = 0;
+    int queueIndex[3][2];
+
     FD_ZERO(&master);
     FD_ZERO(&read_fds);
 
@@ -170,11 +177,69 @@ int main(int argc, char *argv[])
                     sscanf(buf,"%s",operation);
                     if(strcmp(operation, "MENU") == 0)
                     {
-                        sscanf(buf,"%s %d",operation,choice);
+                        sscanf(buf,"%s %d",operation,&choice);
+                        if(choice == 1)
+                        {
+                            
+                            
+                            queueIndex[activeGames][nrOfPlayers] = i;
+                            
+                            nrOfPlayers++;
+                            if(nrOfPlayers == 2)
+                            {
+                                //Start game between the two index nummbers found in queueIndex and then activegames++
+                                printf("Game Ready to start\n");
+                                for(int j = 0; j < 2; j++)
+                                {
+                                    sendValue = send(queueIndex[activeGames][j],gameStartingMsg,sizeof(gameStartingMsg),0);
+                                    if(sendValue < 0)
+                                    {
+                                        printf("Error sending hello msg\n");
+                                        //close(acceptFd);
+                                        break;
+                                    }
+                                    #ifdef DEBUG
+                                    printf("Queuing players = %d", nrOfPlayers);
+                                    #endif
+                                }                             
+                                activeGames++;
+                            }
+                            else
+                            {                            
+                                sendValue = send(i,waitingForPlayer,sizeof(waitingForPlayer),0);
+                                if(sendValue < 0)
+                                {
+                                    printf("Error sending hello msg\n");
+                                    //close(acceptFd);
+                                    break;
+                                }
+                                #ifdef DEBUG
+                                printf("Queuing players = %d", nrOfPlayers);
+                                #endif
+                            }
+                        }
+                        else if(choice == 2)
+                        {
+                            //WATCH
+                        
+                        }
+                        else
+                        {
+                            //Should not get here klient wont let it through until 1 or 2
+                            printf("Bad nr\n");
+                        }
                     }
-                    else if(strcmp(operation, "tillfällig") == 0)
+                    else if(strcmp(operation, "STOP") == 0)
                     {
-
+                        nrOfPlayers--;
+                        printf("Player left queue\n"); 
+                        sendValue = send(i,menuMsg,sizeof(menuMsg),0);
+                        if(sendValue < 0)
+                        {
+                            printf("Error sending hello msg\n");
+                            //close(acceptFd);
+                            break;
+                        }
                     }
                     else
                     {
