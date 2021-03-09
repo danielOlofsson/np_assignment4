@@ -69,7 +69,10 @@ int main(int argc, char *argv[])
     char sendMsg[256];
     char inputMsg[256];
     char stopQ[] = "STOP\n";
-    char command[30]; 
+    char ready[] = "READY\n";
+    char command[30];
+    bool startSent = false;
+    int sec = 0;
 
     fd_set masterFds;
     FD_ZERO(&readfds);
@@ -96,7 +99,7 @@ int main(int argc, char *argv[])
             {    
                 memset(inputMsg,0,sizeof(inputMsg));
                 fgets(inputMsg, 256, stdin);
-                FD_CLR(STDIN_FILENO,&readfds);
+                
                
                 if(strcmp(inputMsg,"1\n") == 0 || strcmp(inputMsg,"2\n") == 0 || strcmp(inputMsg,"0\n") == 0)
                 {
@@ -154,6 +157,25 @@ int main(int argc, char *argv[])
                 }
 
             }
+            else if(strcmp(command, "START") == 0)
+            {
+                
+                memset(inputMsg,0,sizeof(inputMsg));
+                fgets(inputMsg, 256, stdin);                         
+                if(strcmp(inputMsg,"\n") == 0)
+                {
+                    //send msg that you left the queue
+                    sendValue = send(clientSocket, ready, strlen(ready), 0);
+                    
+                    if (sendValue == -1) 
+                    {
+                        perror("sendto:");
+                        exit(4);
+                    }
+                    printf("Sent ready msg\n");
+                    //startSent = true;                                    
+                }
+            }
             fflush(stdin);
             FD_CLR(STDIN_FILENO,&readfds);
         }
@@ -175,21 +197,29 @@ int main(int argc, char *argv[])
             if(strcmp(command,"MENU") == 0)
             {
                 printf("1.Play\n2.Watch\n0.Exit\n");
-                fflush(stdout);
-                          
-
+                fflush(stdout);                          
             }
             else if(strcmp(command,"WAIT") == 0)
             {
-                printf("Waiting for another player\n");      
-                fflush(stdout);
-                            
+                printf("Waiting for another player, ENTER to stop\n");      
+                fflush(stdout);                         
             }
             else if(strcmp(command,"START") == 0)
             {
-                printf("GAME starting in :X\n");
+                printf("Game is ready, press enter to accept\n\n");
+                fflush(stdout);                             
+            }
+            else if(strcmp(command,"READY") == 0)
+            {
+                printf("You are now ready\n");
                 fflush(stdout);
-                             
+            }
+            else if(strcmp(command, "TIME") == 0)
+            {
+                sscanf(buf,"%s %d",command, &sec);
+                printf("Game is starting in %d seconds\n",sec);
+                fflush(stdout);
+
             }
             FD_CLR(clientSocket,&readfds);
         }

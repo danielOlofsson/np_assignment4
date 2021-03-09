@@ -6,8 +6,66 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <iostream>
+#include <sys/time.h>
 using namespace std;
 
+struct activeGames
+{
+    struct timeval time;
+    int index;
+    int sockNr1;
+    int sockNr2;
+    int timeTaken1;
+    int timeTaken2;
+    bool socket1Ready;
+    bool socket2Ready;
+    bool concluded;
+    bool started;
+};
+
+activeGames games[10];
+
+void fill()
+{
+    for(int i = 0; i < 10; i++)
+    {
+        games[i].started = false;
+        games[i].index = -1;
+        games[i].socket1Ready = false;
+        games[i].socket2Ready = false;
+        games[i].sockNr1 = -1;
+        games[i].sockNr2 = -1;
+        games[i].concluded = false;
+    }
+   
+}
+void sendTimingMsg(int arrayIndex, int sec)
+{
+    bool isFinished;
+    char timeMsg[50];
+    memset(timeMsg,0,sizeof(timeMsg));
+    int sendValue = 0;
+    int sendValue2 = 0;
+    sprintf(timeMsg,"TIME %d\n",sec);                            
+    sendValue = send(games[arrayIndex].sockNr1,timeMsg,strlen(timeMsg),0);
+    if(sendValue < 0)
+    {
+        printf("Error sending hello msg\n");                                    
+        exit(3);
+    }
+    printf("sendbytes1: %d\n", sendValue);
+    fflush(stdout);
+    sendValue2 = send(games[arrayIndex].sockNr2,timeMsg,strlen(timeMsg),0);
+    if(sendValue < 0)
+    {
+        printf("Error sending hello msg\n");                                    
+        exit(3);
+    }
+    printf("sendbytes2: %d\n", sendValue2);
+    printf("efter båda skickas\n");
+    
+    fflush(stdout);
+}
 
 int main(int argc, char *argv[])
 {
@@ -18,6 +76,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
+    fill();
     char delim[]=":";
     char *Desthost=strtok(argv[1],delim);
     char *Destport=strtok(NULL,delim);
@@ -28,13 +87,19 @@ int main(int argc, char *argv[])
 
     struct addrinfo hints, *p, *servinfo;
 
+    struct timeval timeout;
+    timeout.tv_sec = 1;
+    timeout.tv_usec = 0;
+    
+   
+
     fd_set master;
     fd_set read_fds;
     int maxFds;
     int listenSocket;
     int acceptFd;
     int nrOfPlayers = 0;
-    int activeGames = 0;
+    int gameCounter = 0;
 
     memset(&hints,0,sizeof(hints));
     hints.ai_socktype = SOCK_STREAM;
@@ -45,6 +110,7 @@ int main(int argc, char *argv[])
     char menuMsg[] = "MENU\n";
     char waitingForPlayer[] = "WAIT\n";
     char gameStartingMsg[] = "START\n";
+    char ready[] = "READY";
     char operation[256];
 
     memset(buf,0,sizeof(buf));
@@ -53,7 +119,7 @@ int main(int argc, char *argv[])
     int recivedValue;
     int sendValue;
     int choice = 0;
-    int queueIndex[3][2];
+    int queueIndex[10][2];
 
     FD_ZERO(&master);
     FD_ZERO(&read_fds);
@@ -100,7 +166,7 @@ int main(int argc, char *argv[])
 
 
     FD_SET(listenSocket,&master);
-
+    
     maxFds = listenSocket;
     #ifdef DEBUG
     printf("Before loop\n");
@@ -110,11 +176,12 @@ int main(int argc, char *argv[])
         memset(buf,0,sizeof(buf));
         memset(operation,0,sizeof(operation));
         read_fds = master;
-        if(select(maxFds+1,&read_fds,NULL,NULL,NULL) == -1)
+        if(select(maxFds+1,&read_fds,NULL,NULL,&timeout) == -1)
         {
             printf("Select error\n");
             exit(2);
         }
+        
 
 
         for(int i = 0; i <= maxFds; i++)
@@ -182,16 +249,17 @@ int main(int argc, char *argv[])
                         if(choice == 1)
                         {
 
-                            queueIndex[activeGames][nrOfPlayers] = i;
                             
+                            queueIndex[gameCounter][nrOfPlayers] = i;                            
                             nrOfPlayers++;
-                            if(nrOfPlayers == 2)
+                            if((nrOfPlayers % 2) == 0)
                             {
-                                //Start game between the two index nummbers found in queueIndex and then activegames++
+                                //Start game between the two index nummbers found in queueIndex and then gameCounter++
+                                games[gameCounter].sockNr2 = i;
                                 printf("Game Ready to start\n");
                                 for(int j = 0; j < 2; j++)
                                 {
-                                    sendValue = send(queueIndex[activeGames][j],gameStartingMsg,sizeof(gameStartingMsg),0);
+                                    sendValue = send(queueIndex[gameCounter][j],gameStartingMsg,strlen(gameStartingMsg),0);
                                     if(sendValue < 0)
                                     {
                                         printf("Error sending hello msg\n");
@@ -201,12 +269,15 @@ int main(int argc, char *argv[])
                                     #ifdef DEBUG
                                     printf("Queuing players = %d", nrOfPlayers);
                                     #endif
-                                }                             
-                                activeGames++;
+                                }
+                                games[gameCounter].index = gameCounter;                             
+                                gameCounter++;                            
+                                
                             }
                             else
-                            {                            
-                                sendValue = send(i,waitingForPlayer,sizeof(waitingForPlayer),0);
+                            {        
+                                games[gameCounter].sockNr1 = i;                    
+                                sendValue = send(i,waitingForPlayer,strlen(waitingForPlayer),0);
                                 if(sendValue < 0)
                                 {
                                     printf("Error sending hello msg\n");
@@ -221,7 +292,7 @@ int main(int argc, char *argv[])
                         else if(choice == 2)
                         {
                             //WATCH
-                        
+                            printf("Watch not made yet stopid\n");                        
                         }
                         else
                         {
@@ -233,7 +304,7 @@ int main(int argc, char *argv[])
                     {
                         nrOfPlayers--;
                         printf("Player left queue\n"); 
-                        sendValue = send(i,menuMsg,sizeof(menuMsg),0);
+                        sendValue = send(i,menuMsg,strlen(menuMsg),0);
                         if(sendValue < 0)
                         {
                             printf("Error sending hello msg\n");
@@ -241,13 +312,68 @@ int main(int argc, char *argv[])
                             break;
                         }                        
                     }
-                    else
+                    else if(strcmp(operation, "READY") == 0)
                     {
-
+                        printf("Ready recived\n");
+                        for(int j = 0; j < gameCounter; j++)
+                        {
+                            if(games[j].sockNr2 == i)
+                            {
+                                games[j].socket2Ready = true;
+                                /*
+                                sendValue = send(i,ready,strlen(ready),0);
+                                if(sendValue < 0)
+                                {
+                                    printf("Error sending hello msg\n");
+                                    //close(acceptFd);
+                                    break;
+                                }
+                                */
+                            }
+                            if(games[j].sockNr1 == i)
+                            {
+                                games[j].socket1Ready = true;
+                                /*
+                                sendValue = send(i,ready,strlen(ready),0);
+                                if(sendValue < 0)
+                                {
+                                    printf("Error sending hello msg\n");
+                                    //close(acceptFd);
+                                    break;
+                                }                            
+                                */
+                            }                                                       
+                        }
+                        for(int j = 0; j < gameCounter; j++)
+                        {
+                            if(games[j].socket1Ready == true && games[j].socket2Ready == true && games[j].started != true)
+                            {
+                                // STarta spelet
+                                printf("Båda klienter redo!\n");  
+                                games[j].started = true;                                                            
+                                sendTimingMsg(j,3);
+                                gettimeofday(&games[j].time,NULL);
+                                fflush(stdout);      
+                            }
+                        }
+                       
+                    }
+                }
+            }
+            else
+            {
+                for(int i = 0; i < gameCounter; i++)
+                {
+                    struct timeval comparetime;
+                    gettimeofday(&comparetime,NULL);
+                    if((comparetime.tv_sec - games[i].time.tv_sec) > 1 && games[i].started == true)
+                    {                
+                        sendTimingMsg(i,2);
                     }
                 }
             }
         }
+      
     }
 
 
