@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sys/unistd.h>
 #include <iostream>
+#include <sys/time.h>
 #define DEBUG
 
 using namespace std;
@@ -29,14 +30,13 @@ int main(int argc, char *argv[])
     int recivedValue = 0;
     int sendValue  = 0;
     int clientSocket;
-    int choice = -1;
-    bool isSent = false;
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC; 
     hints.ai_socktype = SOCK_STREAM; 
     hints.ai_flags = AI_PASSIVE; 
 
+  
     if ((recivedValue = getaddrinfo(Desthost, Destport, &hints, &serverinfo)) != 0) 
     {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(recivedValue));
@@ -69,6 +69,7 @@ int main(int argc, char *argv[])
     char sendMsg[256];
     char inputMsg[256];
     char stopQ[] = "STOP\n";
+    char command[30]; 
 
     fd_set masterFds;
     FD_ZERO(&readfds);
@@ -88,7 +89,74 @@ int main(int argc, char *argv[])
             printf("Error with select");
             continue;
         }
+        if(FD_ISSET(STDIN_FILENO,&readfds))
+        {           
+            
+            if(strcmp(command,"MENU") == 0)
+            {    
+                memset(inputMsg,0,sizeof(inputMsg));
+                fgets(inputMsg, 256, stdin);
+                FD_CLR(STDIN_FILENO,&readfds);
+               
+                if(strcmp(inputMsg,"1\n") == 0 || strcmp(inputMsg,"2\n") == 0 || strcmp(inputMsg,"0\n") == 0)
+                {
+                    if(strcmp(inputMsg, "1\n") == 0)
+                    {
+                        sprintf(sendMsg,"MENU %d\n",1);
+                        sendValue = send(clientSocket, sendMsg, strlen(sendMsg), 0);
+                        if (sendValue == -1) 
+                        {
+                            perror("sendto:");
+                            break;
+                        }                        
+                    }
+                    else if(strcmp(inputMsg,"2\n") == 0)
+                    {
+                        sprintf(sendMsg,"MENU %d\n",2);
+                        sendValue = send(clientSocket, sendMsg, strlen(sendMsg), 0);
+                        if (sendValue == -1) 
+                        {
+                            perror("sendto:");
+                            break;
+                            
+                        }
+                    }
+                    else if(strcmp(inputMsg,"0\n") == 0)
+                    {
+                        close(clientSocket);
+                        exit(3);
+                    }
+                    
+                }
+                else
+                {
+                    printf("Choose between given nummbers!\n");
+                    printf("1.Play\n2.Watch\n0.Exit\n");
+                    
+                }
+                               
+            }
+            else if(strcmp(command, "WAIT") == 0)
+            {       
+                memset(inputMsg,0,sizeof(inputMsg));
+                fgets(inputMsg, 256, stdin);                         
+                if(strcmp(inputMsg,"\n") == 0)
+                {
+                    //send msg that you left the queue
+                    sendValue = send(clientSocket, stopQ, strlen(stopQ), 0);
+                    
+                    if (sendValue == -1) 
+                    {
+                        perror("sendto:");
+                        exit(4);
+                    }
+                    printf("Sent stop Queue msg\n");                                    
+                }
 
+            }
+            fflush(stdin);
+            FD_CLR(STDIN_FILENO,&readfds);
+        }
         if(FD_ISSET(clientSocket, &readfds))
         {   
             recivedValue = recv(clientSocket, buf, sizeof(buf), 0);
@@ -103,70 +171,27 @@ int main(int argc, char *argv[])
                 break;
             }
             //printf("Message recived: %s",buf);
+            sscanf(buf,"%s",command);
+            if(strcmp(command,"MENU") == 0)
+            {
+                printf("1.Play\n2.Watch\n0.Exit\n");
+                fflush(stdout);
+                          
 
-            if(strcmp(buf,"Please select:\n1.Play\n2.Watch\n0.Exit\n") == 0)
-            {
-                //Menu text recived
-                
-                while(isSent == false)
-                {                                    
-                    printf("%s",buf);                    
-                    cin >> choice;
-                    cin.ignore();
-                    
-                    if(choice == 1 || choice == 2)
-                    {
-                        sprintf(sendMsg,"MENU %d\n",choice);
-                        sendValue = send(clientSocket, sendMsg, strlen(sendMsg), 0);
-                        if (sendValue == -1) 
-                        {
-                            perror("sendto:");
-                            break;
-                        }  
-                        isSent = true;                       
-                    }
-                    else if(choice == 0)
-                    {
-                        close(clientSocket);
-                        exit(3);
-                    }
-                    else
-                    {
-                        printf("choose from given options!\n");                                                
-                    }                    
-                }
-                isSent = false;
             }
-            else if(strcmp(buf,"One more player requierd to start game\n") == 0)
+            else if(strcmp(command,"WAIT") == 0)
             {
-                printf("Type 'EXIT' to leave\n");
-                while(1)
-                {
-                    if(FD_ISSET(clientSocket, &readfds))
-                    {
-                        break;
-                    }
-                    memset(inputMsg,0,sizeof(inputMsg));
-                    fgets(inputMsg, 256, stdin);
-
-                    if(strcmp(inputMsg,"EXIT\n") == 0)
-                    {
-                        //send msg that you left the queue
-                        sendValue = send(clientSocket, stopQ, strlen(stopQ), 0);
-                        if (sendValue == -1) 
-                        {
-                            perror("sendto:");
-                            exit(4);
-                        }
-                        printf("Sent stop Queue msg\n");
-                        break;
-                    }                
-                }        
+                printf("Waiting for another player\n");      
+                fflush(stdout);
+                            
             }
-            else if(strcmp(buf,"Game startig in X\n") == 0)
+            else if(strcmp(command,"START") == 0)
             {
-                printf("buf:\n%s",buf);
-            }          
+                printf("GAME starting in :X\n");
+                fflush(stdout);
+                             
+            }
+            FD_CLR(clientSocket,&readfds);
         }
     }
 

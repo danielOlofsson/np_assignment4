@@ -42,9 +42,9 @@ int main(int argc, char *argv[])
     hints.ai_family = AF_UNSPEC;
 
     char buf[256];
-    char menuMsg[] = "Please select:\n1.Play\n2.Watch\n0.Exit\n";
-    char waitingForPlayer[] = "One more player requierd to start game\n";
-    char gameStartingMsg[] = "Game startig in X\n";
+    char menuMsg[] = "MENU\n";
+    char waitingForPlayer[] = "WAIT\n";
+    char gameStartingMsg[] = "START\n";
     char operation[256];
 
     memset(buf,0,sizeof(buf));
@@ -175,13 +175,13 @@ int main(int argc, char *argv[])
                     }
                     printf("recived msg: %s",buf);
                     sscanf(buf,"%s",operation);
+
                     if(strcmp(operation, "MENU") == 0)
                     {
                         sscanf(buf,"%s %d",operation,&choice);
                         if(choice == 1)
                         {
-                            
-                            
+
                             queueIndex[activeGames][nrOfPlayers] = i;
                             
                             nrOfPlayers++;
@@ -239,7 +239,7 @@ int main(int argc, char *argv[])
                             printf("Error sending hello msg\n");
                             //close(acceptFd);
                             break;
-                        }
+                        }                        
                     }
                     else
                     {
