@@ -70,9 +70,12 @@ int main(int argc, char *argv[])
     char inputMsg[256];
     char stopQ[] = "STOP\n";
     char ready[] = "READY\n";
-    char command[30];
+    char command[50];
     bool startSent = false;
     int sec = 0;
+    int round = 0;
+    int score1 = 0;
+    int score2 = 0;
 
     fd_set masterFds;
     FD_ZERO(&readfds);
@@ -83,6 +86,7 @@ int main(int argc, char *argv[])
     while(1)
     {
         readfds = masterFds;
+        FD_SET(STDIN_FILENO,&masterFds);
         memset(buf,0,sizeof(buf));
         memset(sendMsg,0,sizeof(sendMsg));
         
@@ -176,6 +180,51 @@ int main(int argc, char *argv[])
                     //startSent = true;                                    
                 }
             }
+            else if(strcmp(command, "ROUND") == 0)
+            {
+                memset(inputMsg,0,sizeof(inputMsg));
+                fgets(inputMsg, 256, stdin);
+                
+               
+                if(strcmp(inputMsg,"1\n") == 0 || strcmp(inputMsg,"2\n") == 0 || strcmp(inputMsg,"3\n") == 0)
+                {
+                    if(strcmp(inputMsg, "1\n") == 0)
+                    {
+                        sprintf(sendMsg,"ROUND %d\n",1);
+                        sendValue = send(clientSocket, sendMsg, strlen(sendMsg), 0);
+                        if (sendValue == -1) 
+                        {
+                            perror("sendto:");
+                            break;
+                        } 
+                    }
+                    else if(strcmp(inputMsg, "2\n") == 0)
+                    {
+                        sprintf(sendMsg,"ROUND %d\n",2);
+                        sendValue = send(clientSocket, sendMsg, strlen(sendMsg), 0);
+                        if (sendValue == -1) 
+                        {
+                            perror("sendto:");
+                            break;
+                        } 
+                    }
+                    else if(strcmp(inputMsg, "3\n") == 0)
+                    {
+                        sprintf(sendMsg,"ROUND %d\n",3);
+                        sendValue = send(clientSocket, sendMsg, strlen(sendMsg), 0);
+                        if (sendValue == -1) 
+                        {
+                            perror("sendto:");
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    printf("Choose between given nummbers!\n");
+                    printf("Select your option:\n1.Rock\n2.Paper\n3.Scissor\n");
+                }
+            }
             fflush(stdin);
             FD_CLR(STDIN_FILENO,&readfds);
         }
@@ -220,6 +269,44 @@ int main(int argc, char *argv[])
                 printf("Game is starting in %d seconds\n",sec);
                 fflush(stdout);
 
+            }
+            else if(strcmp(command, "ROUND") == 0)
+            {
+                sscanf(buf,"%s %d",command, &round);
+                printf("Round %d\n",round);
+                printf("Select your option:\n1.Rock\n2.Paper\n3.Scissor\n");
+                
+                fflush(stdout);
+            }
+            else if(strcmp(command, "ROUNDF") == 0)
+            {
+                sscanf(buf,"%s %d %d",command, &score1, &score2);
+                printf("Score %d - %d\n",score1, score2);
+                fflush(stdout);
+            }
+            else if(strcmp(command, "WIN"))
+            {
+                sscanf(buf,"%s %d %d",command, &score1, &score2);
+                printf("You Win!\nScore: %d - %d\n\n", score1, score2);
+                fflush(stdout);
+                memset(command,0,sizeof(command));
+                printf("1.Play\n2.Watch\n0.Exit\n");
+                fflush(stdout);
+                sprintf(command, "MENU");
+                
+                
+            }
+            else if(strcmp(command, "LOSE"))
+            {
+                sscanf(buf,"%s %d %d",command, &score1, &score2);
+                printf("You Lose..\nScore: %d - %d\n\n", score1, score2);                
+                printf("1.Play\n2.Watch\n0.Exit\n");
+                fflush(stdout);
+                memset(command,0,sizeof(command));
+                fflush(stdout);
+                sprintf(command, "MENU");                
+                
+                
             }
             FD_CLR(clientSocket,&readfds);
         }
