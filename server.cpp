@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <iostream>
 #include <sys/time.h>
+#include <cstring>
 using namespace std;
 
 struct activeGames
@@ -33,15 +34,18 @@ struct activeGames
     
 };
 
-activeGames games[10];
+activeGames games[100];
 
-struct highscoore
+struct highscore
 {
     int winnerScore;
     int looseScore;
     struct timeval deltaTimeWinner;
     struct timeval deltaTimeLooser;
-}
+    
+};
+
+struct highscore scoreList[100];
 
 void fill()
 {
@@ -62,9 +66,18 @@ void fill()
         games[i].bothAnswered = false;
        
         
-    }
-   
+    }   
 }
+
+void initializeScore()
+{
+    for(int i = 0; i < 100; i++)
+    {
+        scoreList[i].looseScore = 0;
+        scoreList[i].winnerScore = 0;
+    }
+}
+
 void sendTimingMsg(int arrayIndex)
 {    
     char timeMsg[50];
@@ -189,6 +202,7 @@ int main(int argc, char *argv[])
     }
 
     fill();
+    initializeScore();
     char delim[]=":";
     char *Desthost=strtok(argv[1],delim);
     char *Destport=strtok(NULL,delim);
@@ -203,8 +217,8 @@ int main(int argc, char *argv[])
     timeout.tv_sec = 0;
     timeout.tv_usec = 1000000;
     
-   
-
+    std::string tempString;
+    std::string bufString;
     fd_set master;
     fd_set read_fds;
     
@@ -227,6 +241,8 @@ int main(int argc, char *argv[])
     char win[50];
     char lose[50];
     char operation[256];
+    char charHighScore[4000];
+    char bigBuf2[4011];
 
     memset(buf,0,sizeof(buf));
     
@@ -236,6 +252,7 @@ int main(int argc, char *argv[])
     int choice = 0;
     int answer = 0;
     int winner = 0;
+    int savedScores = 0;
     FD_ZERO(&master);
     FD_ZERO(&read_fds);
    
@@ -366,8 +383,6 @@ int main(int argc, char *argv[])
                         if(choice == 1)
                         {
 
-                            
-                                                      
                             nrOfPlayers++;
                             if((nrOfPlayers % 2) == 0)
                             {
@@ -415,6 +430,35 @@ int main(int argc, char *argv[])
                             //WATCH
                             printf("Watch not made yet stopid\n");                        
                         }
+                        else if(choice == 3)
+                        {
+                            scoreList[0].looseScore = 1;
+                            scoreList[0].winnerScore = 3;
+                            scoreList[1].looseScore = 2;
+                            scoreList[1].winnerScore = 3;
+                            savedScores = 2;
+                            memset(bigBuf2,0,sizeof(bigBuf2));
+                            memset(charHighScore,0,sizeof(charHighScore));
+                            printf("HIGSCORE LIST:");
+                            for(int i = 0; i < savedScores; i++)
+                            {
+                                bufString = "Score: " + std::to_string(scoreList[i].winnerScore) + " - " + std::to_string(scoreList[i].looseScore) + "\n";
+                                tempString += bufString;
+                            }
+                            std::cout << tempString << std::endl;
+                            strcpy(charHighScore,tempString.c_str());
+                            tempString = "";
+                            sprintf(bigBuf2,"Highscore \n%s",charHighScore);
+
+                            sendValue = send(i,bigBuf2,strlen(bigBuf2),0);
+                            if(sendValue < 0)
+                            {
+                                printf("Error sending hello msg\n");
+                                //close(acceptFd);
+                                break;
+                            }
+                            printf("send MSG = %s size %d",bigBuf2, sendValue);
+                        }
                         else
                         {
                             //Should not get here klient wont let it through until 1 or 2
@@ -453,7 +497,7 @@ int main(int argc, char *argv[])
                         {
                             if(games[j].socket1Ready == true && games[j].socket2Ready == true && games[j].started != true)
                             {
-                                // STarta spelet
+                                // Starta spelet
                                 printf("Båda klienter redo!\n");  
                                 games[j].started = true;                                                            
                                 sendTimingMsg(j);
@@ -493,7 +537,8 @@ int main(int argc, char *argv[])
                                     if(games[j].score1 == 3)
                                     {
                                         games[j].secondsToCount = -1;
-                                        games[j].concluded = true;                                
+                                        games[j].concluded = true;
+                                                                       
                                         memset(win,0,sizeof(win));
                                         sprintf(win,"WIN %d %d\n",games[j].score1,games[j].score2);                            
                                         sendValue = send(games[j].sockNr1,win,strlen(win),0);
@@ -512,6 +557,12 @@ int main(int argc, char *argv[])
                                             printf("Error sending hello msg\n");                                    
                                             exit(4);
                                         }
+                                        
+                                        games[j].sockNr1 = -1;
+                                        games[j].sockNr2 = -1; 
+                                        //SaveHighScore
+                                        scoreList[savedScores].looseScore = games[j].score2;
+                                        scoreList[savedScores++].winnerScore = games[j].score1;
                                         
                                         fflush(stdout);
                                     }
@@ -546,12 +597,13 @@ int main(int argc, char *argv[])
                                 }
                                 else if(winner == 2)
                                 {
-                                     //sock 2 winner
+                                    //sock 2 winner
                                     games[j].score2++;
                                     if(games[j].score2 == 3)
                                     {
                                         games[j].secondsToCount = -1;
                                         games[j].concluded = true;
+                                        
                                         memset(lose,0,sizeof(lose));
                                         sprintf(lose,"LOSE %d %d\n",games[j].score1,games[j].score2);                            
                                         sendValue = send(games[j].sockNr1,lose,strlen(lose),0);
@@ -570,7 +622,11 @@ int main(int argc, char *argv[])
                                             printf("Error sending hello msg\n");                                    
                                             exit(4);
                                         }                                        
-                                        
+                                        games[j].sockNr1 = -1;
+                                        games[j].sockNr2 = -1;
+                                        // Save highscore                                        
+                                        scoreList[savedScores].looseScore = games[j].score1;
+                                        scoreList[savedScores++].winnerScore = games[j].score2;
                                         fflush(stdout);
 
                                     }
@@ -659,8 +715,7 @@ int main(int argc, char *argv[])
                         {
                             printf("blahaha\n");
                             sendTimingMsg(i);
-                        }
-                        
+                        }                        
                     }
                 }
             }
