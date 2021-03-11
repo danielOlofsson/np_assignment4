@@ -95,7 +95,7 @@ void sendTimingMsg(int arrayIndex)
     printf("seconds to count = %d\n",games[arrayIndex].secondsToCount);
     if(games[arrayIndex].secondsToCount == 0)
     {
-        
+        games[arrayIndex].roundNr++;
         sprintf(roundMsg,"ROUND %d\n",games[arrayIndex].roundNr);
         sendValue = send(games[arrayIndex].sockNr1,roundMsg,strlen(roundMsg),0);
         if(sendValue < 0)
@@ -114,6 +114,18 @@ void sendTimingMsg(int arrayIndex)
         printf("efter båda skickas\n");
         fflush(stdout);
         games[arrayIndex].isAnswering = true;
+        for(int i = 0; i < games[arrayIndex].nrOfWatching; i++)
+        {
+                                       
+            sendValue = send(games[arrayIndex].watching[i],roundMsg,strlen(roundMsg),0);
+            if(sendValue < 0)
+            {
+                printf("Error sending hello msg\n");                                    
+                exit(4);
+            }
+            printf("sendbytes1: %d\n", sendValue);
+            fflush(stdout);
+        }
     }
     else if(games[arrayIndex].secondsToCount > 0)
     {
@@ -134,8 +146,22 @@ void sendTimingMsg(int arrayIndex)
         }
         printf("sendbytes2: %d\n", sendValue2);
         printf("efter båda skickas\n");
-        games[arrayIndex].secondsToCount--;
+        
         fflush(stdout);
+
+        for(int i = 0; i < games[arrayIndex].nrOfWatching; i++)
+        {
+            sprintf(timeMsg,"TIME %d\n",games[arrayIndex].secondsToCount);                            
+            sendValue = send(games[arrayIndex].watching[i],timeMsg,strlen(timeMsg),0);
+            if(sendValue < 0)
+            {
+                printf("Error sending hello msg\n");                                    
+                exit(4);
+            }
+            printf("sendbytes1: %d\n", sendValue);
+            fflush(stdout);
+        }
+        games[arrayIndex].secondsToCount--;
     }
     
     
@@ -247,6 +273,7 @@ int main(int argc, char *argv[])
     char lose[50];
     char choose[50];
     char operation[256];
+    char finished[50];
     char charHighScore[4000];
     char bigBuf2[4011];
 
@@ -321,8 +348,7 @@ int main(int argc, char *argv[])
         {
             printf("Select error\n");
             exit(2);
-        }
-        
+        }       
 
 
         for(int i = 0; i <= maxFds; i++)
@@ -574,7 +600,8 @@ int main(int argc, char *argv[])
                                 games[j].nrOfWatching++;
                                 break;
                             }                        
-                        }                        
+                        }
+                                                
                     }
                     else if(strcmp(operation, "READY") == 0)
                     {
@@ -631,7 +658,9 @@ int main(int argc, char *argv[])
 
                                 if(winner == 1)
                                 {
-                                    //sock 1 winner                                    
+                                    
+                                    //sock 1 winner
+                                                                        
                                     games[j].score1++;
                                     if(games[j].score1 == 3)
                                     {
@@ -655,6 +684,19 @@ int main(int argc, char *argv[])
                                         {
                                             printf("Error sending hello msg\n");                                    
                                             exit(4);
+                                        }
+                                        memset(finished,0,sizeof(finished));
+                                        sprintf(finished,"FINISHED %d %d\n", games[j].score1, games[j].score2); 
+                                        for(int k = 0; k < games[j].nrOfWatching; k++)
+                                        {                                                                                                                   
+                                            sendValue = send(games[j].watching[k],finished,strlen(finished),0);
+                                            if(sendValue < 0)
+                                            {
+                                                printf("Error sending hello msg\n");                                    
+                                                exit(4);
+                                            }
+                                            printf("sendbytes1: %d\n", sendValue);
+                                            fflush(stdout);
                                         }
                                         
                                         games[j].sockNr1 = -1;
@@ -685,9 +727,25 @@ int main(int argc, char *argv[])
                                             printf("Error sending hello msg\n");                                    
                                             exit(4);
                                         }
+                                        fflush(stdout);
+                                        memset(roundF,0,sizeof(roundF));
+                                        sprintf(roundF,"ROUNDF %d %d\n",games[j].score1,games[j].score2);
+                                        for(int k = 0; k < games[j].nrOfWatching; k++)
+                                        {                                                                                                                   
+                                            sendValue = send(games[j].watching[k],roundF,strlen(roundF),0);
+                                            if(sendValue < 0)
+                                            {
+                                                printf("Error sending hello msg\n");                                    
+                                                exit(4);
+                                            }
+                                            printf("sendbytes1: %d\n", sendValue);
+                                            fflush(stdout);
+                                        }
+
+
                                         games[j].choice1 = 0;
                                         games[j].choice2 = 0;
-                                        games[j].roundNr++;
+                                        
                                         games[j].secondsToCount = 3;
                                         games[j].isAnswering = false;
                                         fflush(stdout);
@@ -697,6 +755,7 @@ int main(int argc, char *argv[])
                                 {
                                     //sock 2 winner
                                     games[j].score2++;
+                                    
                                     if(games[j].score2 == 3)
                                     {
                                         games[j].secondsToCount = -1;
@@ -719,7 +778,22 @@ int main(int argc, char *argv[])
                                         {
                                             printf("Error sending hello msg\n");                                    
                                             exit(4);
-                                        }                                        
+                                        }  
+
+                                        memset(finished,0,sizeof(finished));
+                                        sprintf(finished,"FINISHED %d %d\n", games[j].score1, games[j].score2); 
+                                        for(int k = 0; k < games[j].nrOfWatching; k++)
+                                        {                                                                                                                   
+                                            sendValue = send(games[j].watching[k],finished,strlen(finished),0);
+                                            if(sendValue < 0)
+                                            {
+                                                printf("Error sending hello msg\n");                                    
+                                                exit(4);
+                                            }
+                                            printf("sendbytes1: %d\n", sendValue);
+                                            fflush(stdout);
+                                        }
+
                                         games[j].sockNr1 = -1;
                                         games[j].sockNr2 = -1;
                                         // Save highscore                                        
@@ -730,6 +804,7 @@ int main(int argc, char *argv[])
                                     }
                                     else
                                     {
+                                        
                                         printf("sock 2 won\n");
                                         
                                         memset(roundF,0,sizeof(roundF));
@@ -751,9 +826,25 @@ int main(int argc, char *argv[])
                                             exit(4);
                                         }
                                         fflush(stdout);
+
+                                        memset(roundF,0,sizeof(roundF));
+                                        sprintf(roundF,"ROUNDF %d %d\n",games[j].score1,games[j].score2);
+
+                                        for(int k = 0; k < games[j].nrOfWatching; k++)
+                                        {                                                                                                                   
+                                            sendValue = send(games[j].watching[k],roundF,strlen(roundF),0);
+                                            if(sendValue < 0)
+                                            {
+                                                printf("Error sending hello msg\n");                                    
+                                                exit(4);
+                                            }
+                                            printf("sendbytes1: %d\n", sendValue);
+                                            fflush(stdout);
+                                        }
+
                                         games[j].choice1 = 0;
                                         games[j].choice2 = 0;
-                                        games[j].roundNr++;
+                                        
                                         games[j].secondsToCount = 3;
                                         games[j].isAnswering = false;
 
@@ -763,6 +854,7 @@ int main(int argc, char *argv[])
                                 else
                                 {
                                     //draw
+                                    
                                     memset(roundF,0,sizeof(roundF));
                                     sprintf(roundF,"ROUNDF %d %d\n",games[j].score1,games[j].score2);                            
                                     sendValue = send(games[j].sockNr1,roundF,strlen(roundF),0);
@@ -781,9 +873,24 @@ int main(int argc, char *argv[])
                                         exit(4);
                                     }
 
+                                    memset(roundF,0,sizeof(roundF));
+                                    sprintf(roundF,"ROUNDF %d %d\n",games[j].score1,games[j].score2);
+
+                                    for(int k = 0; k < games[j].nrOfWatching; k++)
+                                    {                                                                                                                   
+                                        sendValue = send(games[j].watching[k],roundF,strlen(roundF),0);
+                                        if(sendValue < 0)
+                                        {
+                                            printf("Error sending hello msg\n");                                    
+                                            exit(4);
+                                        }
+                                        printf("sendbytes1: %d\n", sendValue);
+                                        fflush(stdout);
+                                    }
+
                                     games[j].choice1 = 0;
                                     games[j].choice2 = 0;
-                                    games[j].roundNr++;
+                                    
                                     games[j].secondsToCount = 3;
                                     games[j].isAnswering = false;
                                     fflush(stdout);

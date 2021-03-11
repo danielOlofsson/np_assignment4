@@ -80,6 +80,9 @@ int main(int argc, char *argv[])
     int score1 = 0;
     int score2 = 0;
     int gamesPlaying = 0;
+
+    bool isWatching = false;
+
     fd_set masterFds;
     FD_ZERO(&readfds);
     FD_ZERO(&masterFds);
@@ -99,6 +102,7 @@ int main(int argc, char *argv[])
             printf("Error with select");
             continue;
         }
+        fflush(stdin);
         if(FD_ISSET(STDIN_FILENO,&readfds))
         {           
             
@@ -157,95 +161,105 @@ int main(int argc, char *argv[])
                                
             }
             else if(strcmp(command, "WAIT") == 0)
-            {       
-                memset(inputMsg,0,sizeof(inputMsg));
-                fgets(inputMsg, 256, stdin);                         
-                if(strcmp(inputMsg,"\n") == 0)
-                {
-                    //send msg that you left the queue
-                    sendValue = send(clientSocket, stopQ, strlen(stopQ), 0);
-                    
-                    if (sendValue == -1) 
+            {   
+                if(isWatching == false)
+                {    
+                    memset(inputMsg,0,sizeof(inputMsg));
+                    fgets(inputMsg, 256, stdin);                         
+                    if(strcmp(inputMsg,"\n") == 0)
                     {
-                        perror("sendto:");
-                        exit(4);
+                        //send msg that you left the queue
+                        sendValue = send(clientSocket, stopQ, strlen(stopQ), 0);
+                        
+                        if (sendValue == -1) 
+                        {
+                            perror("sendto:");
+                            exit(4);
+                        }
+                        printf("Sent stop Queue msg\n");                                    
                     }
-                    printf("Sent stop Queue msg\n");                                    
                 }
 
             }
             else if(strcmp(command, "START") == 0)
             {
-                
-                memset(inputMsg,0,sizeof(inputMsg));
-                fgets(inputMsg, 256, stdin);                         
-                if(strcmp(inputMsg,"\n") == 0)
+                if(isWatching == false)
                 {
-                    //send msg that you left the queue
-                    sendValue = send(clientSocket, ready, strlen(ready), 0);
-                    
-                    if (sendValue == -1) 
+                    memset(inputMsg,0,sizeof(inputMsg));
+                    fgets(inputMsg, 256, stdin);                         
+                    if(strcmp(inputMsg,"\n") == 0)
                     {
-                        perror("sendto:");
-                        exit(4);
+                        //send msg that you left the queue
+                        sendValue = send(clientSocket, ready, strlen(ready), 0);
+                        
+                        if (sendValue == -1) 
+                        {
+                            perror("sendto:");
+                            exit(4);
+                        }
+                        printf("Sent ready msg\n");
+                        //startSent = true;                                    
                     }
-                    printf("Sent ready msg\n");
-                    //startSent = true;                                    
                 }
             }
             else if(strcmp(command, "ROUND") == 0)
             {
-                memset(inputMsg,0,sizeof(inputMsg));
-                fgets(inputMsg, 256, stdin);
+                if(isWatching == false)
+                {
+                    memset(inputMsg,0,sizeof(inputMsg));
+                    fgets(inputMsg, 256, stdin);
+                    
                 
-               
-                if(strcmp(inputMsg,"1\n") == 0 || strcmp(inputMsg,"2\n") == 0 || strcmp(inputMsg,"3\n") == 0)
-                {
-                    if(strcmp(inputMsg, "1\n") == 0)
+                    if(strcmp(inputMsg,"1\n") == 0 || strcmp(inputMsg,"2\n") == 0 || strcmp(inputMsg,"3\n") == 0)
                     {
-                        sprintf(sendMsg,"ROUND %d\n",1);
-                        sendValue = send(clientSocket, sendMsg, strlen(sendMsg), 0);
-                        if (sendValue == -1) 
+                        if(strcmp(inputMsg, "1\n") == 0)
                         {
-                            perror("sendto:");
-                            break;
-                        } 
-                    }
-                    else if(strcmp(inputMsg, "2\n") == 0)
-                    {
-                        sprintf(sendMsg,"ROUND %d\n",2);
-                        sendValue = send(clientSocket, sendMsg, strlen(sendMsg), 0);
-                        if (sendValue == -1) 
-                        {
-                            perror("sendto:");
-                            break;
-                        } 
-                    }
-                    else if(strcmp(inputMsg, "3\n") == 0)
-                    {
-                        printf("blsas\n");
-                        sprintf(sendMsg,"ROUND %d\n",3);
-                        sendValue = send(clientSocket, sendMsg, strlen(sendMsg), 0);
-                        if (sendValue == -1) 
-                        {
-                            perror("sendto:");
-                            break;
+                            sprintf(sendMsg,"ROUND %d\n",1);
+                            sendValue = send(clientSocket, sendMsg, strlen(sendMsg), 0);
+                            if (sendValue == -1) 
+                            {
+                                perror("sendto:");
+                                break;
+                            } 
                         }
+                        else if(strcmp(inputMsg, "2\n") == 0)
+                        {
+                            sprintf(sendMsg,"ROUND %d\n",2);
+                            sendValue = send(clientSocket, sendMsg, strlen(sendMsg), 0);
+                            if (sendValue == -1) 
+                            {
+                                perror("sendto:");
+                                break;
+                            } 
+                        }
+                        else if(strcmp(inputMsg, "3\n") == 0)
+                        {
+                            printf("blsas\n");
+                            sprintf(sendMsg,"ROUND %d\n",3);
+                            sendValue = send(clientSocket, sendMsg, strlen(sendMsg), 0);
+                            if (sendValue == -1) 
+                            {
+                                perror("sendto:");
+                                break;
+                            }
+                        }
+                    }                                
+                    else
+                    {
+                        printf("Choose between given nummbers!\n");
+                        printf("Select your option:\n1.Rock\n2.Paper\n3.Scissor\n");
                     }
-                }                                
-                else
-                {
-                    printf("Choose between given nummbers!\n");
-                    printf("Select your option:\n1.Rock\n2.Paper\n3.Scissor\n");
                 }
             }
             else if(strcmp(command,"WATCH") == 0)
             {
+                
                 memset(inputMsg,0,sizeof(inputMsg));
                 fgets(inputMsg, 256, stdin);
 
                 if(strcmp(inputMsg,"\n") == 0)
                 {
+                    isWatching = false;
                     sendValue = send(clientSocket, stopWatching, strlen(stopWatching), 0);
                 
                     if (sendValue == -1) 
@@ -255,25 +269,29 @@ int main(int argc, char *argv[])
                     }
                                         
                 }
+                
             }
             else if(strcmp(command, "Highscore") == 0)
             {
-                memset(inputMsg,0,sizeof(inputMsg));
-                fgets(inputMsg, 256, stdin);
-                if(strcmp(inputMsg,"\n") == 0)
+                if(isWatching == false)
                 {
-                    memset(command,0,sizeof(command));
-                    printf("1.Play\n2.Watch\n3.Highscore\n0.Exit\n");
-                    sprintf(command,"MENU");
-                }
-                
+                    memset(inputMsg,0,sizeof(inputMsg));
+                    fgets(inputMsg, 256, stdin);
+                    if(strcmp(inputMsg,"\n") == 0)
+                    {
+                        memset(command,0,sizeof(command));
+                        printf("1.Play\n2.Watch\n3.Highscore\n0.Exit\n");
+                        sprintf(command,"MENU");
+                    }   
+                }             
             }
             else if(strcmp(command, "CHOOSE") == 0)
             {
+                
                 memset(inputMsg,0,sizeof(inputMsg));
                 fgets(inputMsg, 256, stdin);                         
                 if(strcmp(inputMsg,"\n") == 0  || strcmp(inputMsg,"1\n") == 0 || strcmp(inputMsg,"2\n") == 0 || strcmp(inputMsg,"0\n") == 0 || strcmp(inputMsg, "3\n") == 0)
-                {
+                {  
                     if(strcmp(inputMsg,"\n") == 0)
                     {
                         sendValue = send(clientSocket, stopChoosing, strlen(stopChoosing), 0);
@@ -283,13 +301,10 @@ int main(int argc, char *argv[])
                             perror("sendto:");
                             exit(4);
                         }
-                        printf("Sent stop choosing msg\n");
-
-                       /* sprintf(command, "MENU");
-                        printf("1.Play\n2.Watch\n3.Highscore\n0.Exit\n");*/
+                        printf("Sent stop choosing msg\n");                    
 
                     }
-                    if(strcmp(inputMsg, "1\n") == 0)
+                    if(strcmp(inputMsg, "1\n") == 0 && gamesPlaying > 0)
                     {
                         sprintf(sendMsg,"WATCH %d\n",1);
                         sendValue = send(clientSocket, sendMsg, strlen(sendMsg), 0);
@@ -299,9 +314,10 @@ int main(int argc, char *argv[])
                             break;
                         }
                         sprintf(command, "WATCH");
+                        isWatching = true;
                         printf("Watching! Enter to leave\n");                      
                     }
-                    else if(strcmp(inputMsg,"2\n") == 0)
+                    else if(strcmp(inputMsg,"2\n") == 0 && gamesPlaying > 1)
                     {
                         sprintf(sendMsg,"WATCH %d\n",2);
                         sendValue = send(clientSocket, sendMsg, strlen(sendMsg), 0);
@@ -312,9 +328,10 @@ int main(int argc, char *argv[])
                             
                         }
                         sprintf(command, "WATCH");
+                        isWatching = true;
                         printf("Watching! Enter to leave\n"); 
                     }
-                    else if(strcmp(inputMsg,"3\n") == 0)
+                    else if(strcmp(inputMsg,"3\n") == 0 && gamesPlaying > 2)
                     {
                         sprintf(sendMsg,"WATCH %d\n",3);
                         sendValue = send(clientSocket, sendMsg, strlen(sendMsg), 0);
@@ -324,9 +341,10 @@ int main(int argc, char *argv[])
                             break;                            
                         }
                         sprintf(command, "WATCH");
+                        isWatching = true;
                         printf("Watching! Enter to leave\n"); 
                     }
-                    else if(strcmp(inputMsg,"4\n") == 0)
+                    else if(strcmp(inputMsg,"4\n") == 0 && gamesPlaying > 3)
                     {
                         sprintf(sendMsg,"WATCH %d\n",4);
                         sendValue = send(clientSocket, sendMsg, strlen(sendMsg), 0);
@@ -336,6 +354,7 @@ int main(int argc, char *argv[])
                             break;                            
                         }
                         sprintf(command, "WATCH");
+                        isWatching = true;
                         printf("Watching! Enter to leave\n");                    
                     }                                                                               
                 }
@@ -343,6 +362,7 @@ int main(int argc, char *argv[])
                 {
                     printf("choose between game 1-4 listed above or enter to leave\n");
                 }
+                
             }
             fflush(stdin);
             FD_CLR(STDIN_FILENO,&readfds);
@@ -412,8 +432,7 @@ int main(int argc, char *argv[])
                 memset(command,0,sizeof(command));
                 printf("1.Play\n2.Watch\n3.Highscore\n0.Exit\n");
                 sprintf(command, "MENU");
-                fflush(stdout);                                
-                
+                fflush(stdout);                
             }
             else if(strcmp(command, "LOSE") == 0)
             {
@@ -422,8 +441,7 @@ int main(int argc, char *argv[])
                 printf("1.Play\n2.Watch\n3.Highscore\n0.Exit\n");
                 memset(command,0,sizeof(command));
                 sprintf(command, "MENU");
-                fflush(stdout);
-                                                                                                               
+                fflush(stdout);                                                                                            
             }
             else if(strcmp(command, "Highscore") == 0)
             {
@@ -435,11 +453,30 @@ int main(int argc, char *argv[])
             else if(strcmp(command, "CHOOSE") == 0)
             {
                 sscanf(buf,"%s %d",command, &gamesPlaying);
-                printf("Choose one of the active games, up to 4:\n");
-                for(int i = 0; i < gamesPlaying; i++)
+                if(gamesPlaying > 0)
                 {
-                    printf("%d.\n",(i+1));
+                    printf("Choose one of the active games, up to 4:\n");
+                    for(int i = 0; i < gamesPlaying; i++)
+                    {
+                        printf("%d.\n",(i+1));
+                    }
                 }
+                else
+                {
+                    printf("No active games, Enter to quit\n");
+                }
+            }
+            else if(strcmp(command, "FINISHED") == 0)
+            {
+               
+                
+                sscanf(buf,"%s %d %d",command,&score1,&score2);
+                printf("Finished Watching final score:\n %d - %d\n",score1,score2);
+                isWatching = false;
+                printf("1.Play\n2.Watch\n3.Highscore\n0.Exit\n");
+                memset(command,0,sizeof(command));
+                sprintf(command, "MENU");
+                fflush(stdout);
             }
             FD_CLR(clientSocket,&readfds);
         }
