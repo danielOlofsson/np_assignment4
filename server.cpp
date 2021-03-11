@@ -32,6 +32,8 @@ struct activeGames
     bool bothAnswered;
     int watching[100];
     int nrOfWatching;
+    double sockTime1;
+    double sockTime2;
     
 };
 
@@ -220,6 +222,7 @@ int rockPapperScissors(int index)
         //sock 1 vicktory
         winner = 1;
     }
+    
     return winner;
 }
 
@@ -287,6 +290,7 @@ int main(int argc, char *argv[])
     int winner = 0;
     int gameToWatch = 0;
     int savedScores = 0;
+    double tempDouble = 0.0f; 
     FD_ZERO(&master);
     FD_ZERO(&read_fds);
    
@@ -635,7 +639,7 @@ int main(int argc, char *argv[])
                     }
                     else if(strcmp(operation, "ROUND") == 0)
                     {
-                        sscanf(buf,"%s %d",operation, &answer);
+                        sscanf(buf,"%s %d %lf",operation, &answer, &tempDouble);
                         for(int j = 0; j < gameCounter; j++)
                         {
                             printf("for loop test\n");
@@ -643,18 +647,24 @@ int main(int argc, char *argv[])
                             {
                                 printf("socket1 answer saved\n");
                                 games[j].choice1 = answer;
+                                printf("Time taken %8.8g\n",tempDouble);
+                                games[j].timeTaken1 += tempDouble;
+                                tempDouble = 0.0f;                                
                                 answer = 0;
                             }
                             if(games[j].sockNr2 == i)
                             {
                                 printf("socket2 answer saved\n");
                                 games[j].choice2 = answer;
+                                printf("Time taken %8.8g\n",tempDouble);
+                                games[j].timeTaken2 += tempDouble;
+                                tempDouble = 0.0f;
                                 answer = 0;
                             }
                             if(games[j].choice1 != 0 && games[j].choice2 != 0)
                             {
                                 printf("Both answerd\n");
-                                winner =  rockPapperScissors(j);
+                                winner = rockPapperScissors(j);
 
                                 if(winner == 1)
                                 {

@@ -74,14 +74,22 @@ int main(int argc, char *argv[])
     char highscoreBuffer[4000];
     char stopWatching[] = "STOPW\n";
     char stopChoosing[] = "STOPC\n";
-    bool startSent = false;
     int sec = 0;
     int round = 0;
     int score1 = 0;
     int score2 = 0;
     int gamesPlaying = 0;
-
+    double sendTime = 0;
+    bool roundStarted = false;
     bool isWatching = false;
+    bool hasChoosen = false;
+    
+
+    struct timeval nowTime;
+    nowTime.tv_sec = 0;
+    nowTime.tv_usec = 10000;
+
+    struct timeval comparetime, timeTaken;
 
     fd_set masterFds;
     FD_ZERO(&readfds);
@@ -96,7 +104,7 @@ int main(int argc, char *argv[])
         memset(buf,0,sizeof(buf));
         memset(sendMsg,0,sizeof(sendMsg));
         
-        recivedValue = select(clientSocket +1, &readfds,NULL,NULL,NULL);
+        recivedValue = select(clientSocket +1, &readfds,NULL,NULL,&nowTime);
         if(recivedValue == -1)
         {
             printf("Error with select");
@@ -212,36 +220,45 @@ int main(int argc, char *argv[])
                 
                     if(strcmp(inputMsg,"1\n") == 0 || strcmp(inputMsg,"2\n") == 0 || strcmp(inputMsg,"3\n") == 0)
                     {
+                        hasChoosen = true;
                         if(strcmp(inputMsg, "1\n") == 0)
                         {
-                            sprintf(sendMsg,"ROUND %d\n",1);
-                            sendValue = send(clientSocket, sendMsg, strlen(sendMsg), 0);
-                            if (sendValue == -1) 
-                            {
-                                perror("sendto:");
-                                break;
-                            } 
-                        }
-                        else if(strcmp(inputMsg, "2\n") == 0)
-                        {
-                            sprintf(sendMsg,"ROUND %d\n",2);
-                            sendValue = send(clientSocket, sendMsg, strlen(sendMsg), 0);
-                            if (sendValue == -1) 
-                            {
-                                perror("sendto:");
-                                break;
-                            } 
-                        }
-                        else if(strcmp(inputMsg, "3\n") == 0)
-                        {
-                            printf("blsas\n");
-                            sprintf(sendMsg,"ROUND %d\n",3);
+                            printf("3: choosen\n");
+                            sprintf(sendMsg,"ROUND %d %8.8g\n",1, sendTime);
                             sendValue = send(clientSocket, sendMsg, strlen(sendMsg), 0);
                             if (sendValue == -1) 
                             {
                                 perror("sendto:");
                                 break;
                             }
+                            
+                            roundStarted = false;
+                        }
+                        else if(strcmp(inputMsg, "2\n") == 0)
+                        {
+                            printf("2: choosen\n");
+                            sprintf(sendMsg,"ROUND %d %8.8g\n",2, sendTime);
+                            sendValue = send(clientSocket, sendMsg, strlen(sendMsg), 0);
+                            if (sendValue == -1) 
+                            {
+                                perror("sendto:");
+                                break;
+                            } 
+                            
+                            roundStarted = false;
+                        }
+                        else if(strcmp(inputMsg, "3\n") == 0)
+                        {
+                            printf("3: choosen\n");
+                            sprintf(sendMsg,"ROUND %d %8.8g\n",3, sendTime);
+                            sendValue = send(clientSocket, sendMsg, strlen(sendMsg), 0);
+                            if (sendValue == -1) 
+                            {
+                                perror("sendto:");
+                                break;
+                            }
+                            
+                            roundStarted = false;
                         }
                     }                                
                     else
@@ -413,8 +430,44 @@ int main(int argc, char *argv[])
             else if(strcmp(command, "ROUND") == 0)
             {
                 sscanf(buf,"%s %d",command, &round);
+                printf("Timer started\n");
                 printf("Round %d\n",round);
                 printf("Select your option:\n1.Rock\n2.Paper\n3.Scissor\n");
+                if(isWatching == false)
+                {
+                    gettimeofday(&timeTaken,NULL);
+                    hasChoosen = false; 
+                    roundStarted = true;                    
+                                       
+                    /*
+                    while(((comparetime.tv_sec - timeTaken.tv_sec) + (comparetime.tv_usec- timeTaken.tv_usec)/1000000) < 5.0f)
+                    {                    
+                        gettimeofday(&comparetime,NULL);
+                        
+                        if(hasChoosen == true)
+                        {
+                            sendTime = (double)((comparetime.tv_sec - timeTaken.tv_sec) + (comparetime.tv_usec - timeTaken.tv_usec))/1000000.0f;
+                            
+                            break;
+                        }
+                    }
+                    
+                    printf("%8.8g\n",sendTime);
+                    if(hasChoosen == false)
+                    {                        
+                        sendTime = 2.0f;
+                        sprintf(sendMsg,"ROUND %d %8.8g\n",4, sendTime);
+                        sendValue = send(clientSocket, sendMsg, strlen(sendMsg), 0);
+                        if (sendValue == -1) 
+                        {
+                            perror("sendto:");
+                            break;
+                        }   
+                    }
+                    */
+                }
+
+               
                 
                 fflush(stdout);
             }
@@ -467,9 +520,7 @@ int main(int argc, char *argv[])
                 }
             }
             else if(strcmp(command, "FINISHED") == 0)
-            {
-               
-                
+            {                               
                 sscanf(buf,"%s %d %d",command,&score1,&score2);
                 printf("Finished Watching final score:\n %d - %d\n",score1,score2);
                 isWatching = false;
@@ -480,6 +531,26 @@ int main(int argc, char *argv[])
             }
             FD_CLR(clientSocket,&readfds);
         }
+        else
+        {
+            gettimeofday(&comparetime,NULL);
+            if( ((comparetime.tv_sec - timeTaken.tv_sec) + (comparetime.tv_usec - timeTaken.tv_usec)/1000000) > 5.0f && roundStarted == true && hasChoosen == false)
+            {
+                if(hasChoosen == false)
+                {                        
+                    sendTime = 2.0f;
+                    sprintf(sendMsg,"ROUND %d %8.8g\n",4, sendTime);
+                    sendValue = send(clientSocket, sendMsg, strlen(sendMsg), 0);
+                    if (sendValue == -1) 
+                    {
+                        perror("sendto:");
+                        break;
+                    }
+                    hasChoosen = true;
+                    roundStarted = false;
+                }
+            }           
+        }        
     }
 
 
