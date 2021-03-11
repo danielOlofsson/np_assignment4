@@ -258,6 +258,7 @@ int main(int argc, char *argv[])
     int choice = 0;
     int answer = 0;
     int winner = 0;
+    int gameToWatch = 0;
     int savedScores = 0;
     FD_ZERO(&master);
     FD_ZERO(&read_fds);
@@ -441,8 +442,7 @@ int main(int argc, char *argv[])
                                 if(games[j].started == true)
                                 {
                                     tempCounter++;
-                                }
-                                
+                                }                                
                             }
                             printf("Tempcounter = %d\n",tempCounter);
                             memset(choose,0,sizeof(choose));
@@ -522,9 +522,9 @@ int main(int argc, char *argv[])
                             }
                         }
 
-                        //se how many client games that is active.
+                        //see how many client games that is active.
                         int tempCounter = 0;                        
-                        for(int j = 0; j < games[i].nrOfWatching; j++)
+                        for(int j = 0; j < gameCounter; j++)
                         {
                             if(games[j].started == true)
                             {
@@ -546,10 +546,35 @@ int main(int argc, char *argv[])
                     else if(strcmp(operation, "STOPC") == 0)
                     {
                         //STOP CHOOSING
+                        
+                        sendValue = send(i,menuMsg,strlen(menuMsg),0);
+                        if(sendValue < 0)
+                        {
+                            printf("Error sending hello msg\n");
+                            //close(acceptFd);
+                            break;
+                        }
                     }
                     else if(strcmp(operation, "WATCH") == 0)
                     {
                         //lägg till så att client börjar titta
+                        sscanf(buf,"%s %d",operation, &gameToWatch);
+                        // search for the client to watch:
+                        int tempCounter = 0;
+                        for(int j = 0; j < gameCounter; j++)
+                        {
+                            if(games[j].started == true)
+                            {
+                                tempCounter++;
+                            }
+                            if(tempCounter == gameToWatch)
+                            {
+                                //added client to watching list.
+                                games[j].watching[games[j].nrOfWatching] = i;
+                                games[j].nrOfWatching++;
+                                break;
+                            }                        
+                        }                        
                     }
                     else if(strcmp(operation, "READY") == 0)
                     {

@@ -253,10 +253,7 @@ int main(int argc, char *argv[])
                         perror("sendto:");
                         exit(4);
                     }
-                    printf("Sent stop watching msg\n");
-
-                    // ändra till choosing 
-
+                                        
                 }
             }
             else if(strcmp(command, "Highscore") == 0)
@@ -286,10 +283,10 @@ int main(int argc, char *argv[])
                             perror("sendto:");
                             exit(4);
                         }
-                        printf("Sent stop watching msg\n");
+                        printf("Sent stop choosing msg\n");
 
-                        sprintf(command, "MENU");
-                        printf("1.Play\n2.Watch\n3.Highscore\n0.Exit\n");
+                       /* sprintf(command, "MENU");
+                        printf("1.Play\n2.Watch\n3.Highscore\n0.Exit\n");*/
 
                     }
                     if(strcmp(inputMsg, "1\n") == 0)
@@ -300,7 +297,9 @@ int main(int argc, char *argv[])
                         {
                             perror("sendto:");
                             break;
-                        }                        
+                        }
+                        sprintf(command, "WATCH");
+                        printf("Watching! Enter to leave\n");                      
                     }
                     else if(strcmp(inputMsg,"2\n") == 0)
                     {
@@ -312,6 +311,8 @@ int main(int argc, char *argv[])
                             break;
                             
                         }
+                        sprintf(command, "WATCH");
+                        printf("Watching! Enter to leave\n"); 
                     }
                     else if(strcmp(inputMsg,"3\n") == 0)
                     {
@@ -322,6 +323,8 @@ int main(int argc, char *argv[])
                             perror("sendto:");
                             break;                            
                         }
+                        sprintf(command, "WATCH");
+                        printf("Watching! Enter to leave\n"); 
                     }
                     else if(strcmp(inputMsg,"4\n") == 0)
                     {
@@ -332,13 +335,13 @@ int main(int argc, char *argv[])
                             perror("sendto:");
                             break;                            
                         }
-                        
-                    }                        
-                                                       
+                        sprintf(command, "WATCH");
+                        printf("Watching! Enter to leave\n");                    
+                    }                                                                               
                 }
                 else
                 {
-                    printf("choose between the given active games listed above or enter to leave\n");
+                    printf("choose between game 1-4 listed above or enter to leave\n");
                 }
             }
             fflush(stdin);
@@ -435,7 +438,7 @@ int main(int argc, char *argv[])
                 printf("Choose one of the active games, up to 4:\n");
                 for(int i = 0; i < gamesPlaying; i++)
                 {
-                    printf("%d.\n",i);
+                    printf("%d.\n",(i+1));
                 }
             }
             FD_CLR(clientSocket,&readfds);
