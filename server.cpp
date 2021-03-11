@@ -30,7 +30,8 @@ struct activeGames
     int choice1;
     int choice2;
     bool bothAnswered;
-    
+    int watching[100];
+    int nrOfWatching;
     
 };
 
@@ -49,7 +50,7 @@ struct highscore scoreList[100];
 
 void fill()
 {
-    for(int i = 0; i < 10; i++)
+    for(int i = 0; i < 100; i++)
     {
         games[i].started = false;
         games[i].index = -1;
@@ -64,8 +65,12 @@ void fill()
         games[i].choice1 = 0;
         games[i].choice2 = 0;
         games[i].bothAnswered = false;
-       
-        
+        games[i].nrOfWatching = 0;       
+        for(int j = 0; j < 100; j++)
+        {
+            games[i].watching[j] = -1;
+            
+        }
     }   
 }
 
@@ -240,6 +245,7 @@ int main(int argc, char *argv[])
     char roundF[50];
     char win[50];
     char lose[50];
+    char choose[50];
     char operation[256];
     char charHighScore[4000];
     char bigBuf2[4011];
@@ -428,7 +434,28 @@ int main(int argc, char *argv[])
                         else if(choice == 2)
                         {
                             //WATCH
-                            printf("Watch not made yet stopid\n");                        
+                            int tempCounter = 0;
+                            printf("Watch\n");
+                            for(int j = 0; j < gameCounter; j++)
+                            {
+                                if(games[j].started == true)
+                                {
+                                    tempCounter++;
+                                }
+                                
+                            }
+                            printf("Tempcounter = %d\n",tempCounter);
+                            memset(choose,0,sizeof(choose));
+                            sprintf(choose,"CHOOSE %d",tempCounter);
+                            sendValue = send(i,choose,strlen(choose),0);
+                            if(sendValue < 0)
+                            {
+                                printf("Error sending hello msg\n");
+                                //close(acceptFd);
+                                break;
+                            }
+                            fflush(stdout);
+                                                 
                         }
                         else if(choice == 3)
                         {
@@ -457,7 +484,9 @@ int main(int argc, char *argv[])
                                 //close(acceptFd);
                                 break;
                             }
-                            printf("send MSG = %s size %d",bigBuf2, sendValue);
+                            printf("send MSG = %s size%d\n",bigBuf2, sendValue);
+
+                            fflush(stdout);
                         }
                         else
                         {
@@ -476,6 +505,51 @@ int main(int argc, char *argv[])
                             //close(acceptFd);
                             break;
                         }                        
+                    }
+                    else if(strcmp(operation, "STOPW") == 0)
+                    {
+                        //games[i].watching[games[i].nrOfWatching]
+                        
+                        for(int j = 0; j < gameCounter; j++)
+                        {
+                            for(int k = 0; k < games[j].nrOfWatching; k++)
+                            {
+                                if(games[j].watching[k] == i)
+                                {
+                                    games[j].watching[k] = games[j].watching[games[j].nrOfWatching];
+                                    games[j].nrOfWatching--;
+                                }
+                            }
+                        }
+
+                        //se how many client games that is active.
+                        int tempCounter = 0;                        
+                        for(int j = 0; j < games[i].nrOfWatching; j++)
+                        {
+                            if(games[j].started == true)
+                            {
+                                tempCounter++;
+                            }                            
+                        }
+                        memset(choose,0,sizeof(choose));
+                        sprintf(choose,"CHOOSE %d",tempCounter);
+                        sendValue = send(i,choose,strlen(choose),0);
+                        if(sendValue < 0)
+                        {
+                            printf("Error sending hello msg\n");
+                            //close(acceptFd);
+                            break;
+                        }
+                        fflush(stdout);
+
+                    }
+                    else if(strcmp(operation, "STOPC") == 0)
+                    {
+                        //STOP CHOOSING
+                    }
+                    else if(strcmp(operation, "WATCH") == 0)
+                    {
+                        //lägg till så att client börjar titta
                     }
                     else if(strcmp(operation, "READY") == 0)
                     {
@@ -562,8 +636,7 @@ int main(int argc, char *argv[])
                                         games[j].sockNr2 = -1; 
                                         //SaveHighScore
                                         scoreList[savedScores].looseScore = games[j].score2;
-                                        scoreList[savedScores++].winnerScore = games[j].score1;
-                                        
+                                        scoreList[savedScores++].winnerScore = games[j].score1;                                        
                                         fflush(stdout);
                                     }
                                     else
@@ -695,11 +768,9 @@ int main(int argc, char *argv[])
                                 {
                                     printf("HERE\n");
                                     sendTimingMsg(j);
-                                }
-                                
+                                }                                
                             }
-                        }
-                        
+                        }                        
                     }
                 }
             }
@@ -713,7 +784,7 @@ int main(int argc, char *argv[])
                     {                
                         if(games[i].score1 != 3 || games[i].score2 != 3)
                         {
-                            printf("blahaha\n");
+                            
                             sendTimingMsg(i);
                         }                        
                     }
