@@ -80,6 +80,9 @@ int main(int argc, char *argv[])
     int score2 = 0;
     int gamesPlaying = 0;
     double sendTime = 0;
+
+    double seconds = 0.0f;
+    double microSeconds = 0.0f;
     bool roundStarted = false;
     bool isWatching = false;
     bool hasChoosen = false;
@@ -216,14 +219,20 @@ int main(int argc, char *argv[])
                 {
                     memset(inputMsg,0,sizeof(inputMsg));
                     fgets(inputMsg, 256, stdin);
-                    
-                
+
                     if(strcmp(inputMsg,"1\n") == 0 || strcmp(inputMsg,"2\n") == 0 || strcmp(inputMsg,"3\n") == 0)
                     {
                         hasChoosen = true;
+
+                        seconds = comparetime.tv_sec - timeTaken.tv_sec;
+                        microSeconds = comparetime.tv_usec - timeTaken.tv_usec;
+
+                        sendTime = (seconds + microSeconds/1000000.0);
+
+                        printf("sendtime = %8.8f",sendTime);
                         if(strcmp(inputMsg, "1\n") == 0)
                         {
-                            printf("3: choosen\n");
+                            
                             sprintf(sendMsg,"ROUND %d %8.8g\n",1, sendTime);
                             sendValue = send(clientSocket, sendMsg, strlen(sendMsg), 0);
                             if (sendValue == -1) 
@@ -236,7 +245,7 @@ int main(int argc, char *argv[])
                         }
                         else if(strcmp(inputMsg, "2\n") == 0)
                         {
-                            printf("2: choosen\n");
+                            
                             sprintf(sendMsg,"ROUND %d %8.8g\n",2, sendTime);
                             sendValue = send(clientSocket, sendMsg, strlen(sendMsg), 0);
                             if (sendValue == -1) 
@@ -249,7 +258,7 @@ int main(int argc, char *argv[])
                         }
                         else if(strcmp(inputMsg, "3\n") == 0)
                         {
-                            printf("3: choosen\n");
+                            
                             sprintf(sendMsg,"ROUND %d %8.8g\n",3, sendTime);
                             sendValue = send(clientSocket, sendMsg, strlen(sendMsg), 0);
                             if (sendValue == -1) 

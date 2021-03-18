@@ -16,8 +16,8 @@ struct activeGames
     int index;
     int sockNr1;
     int sockNr2;
-    int timeTaken1;
-    int timeTaken2;
+    double timeTaken1;
+    double timeTaken2;
     int score1;
     int score2;
     bool socket1Ready;
@@ -32,9 +32,6 @@ struct activeGames
     bool bothAnswered;
     int watching[100];
     int nrOfWatching;
-    double sockTime1;
-    double sockTime2;
-    
 };
 
 activeGames games[100];
@@ -43,8 +40,8 @@ struct highscore
 {
     int winnerScore;
     int looseScore;
-    struct timeval deltaTimeWinner;
-    struct timeval deltaTimeLooser;
+    double deltaTimeWinner;
+    double deltaTimeLooser;
     
 };
 
@@ -489,17 +486,23 @@ int main(int argc, char *argv[])
                         }
                         else if(choice == 3)
                         {
+                            /*
                             scoreList[0].looseScore = 1;
                             scoreList[0].winnerScore = 3;
+                            scoreList[0].deltaTimeWinner = 1.45;
                             scoreList[1].looseScore = 2;
                             scoreList[1].winnerScore = 3;
+                            scoreList[1].deltaTimeWinner = 1.65;
                             savedScores = 2;
+                            */
+
+
                             memset(bigBuf2,0,sizeof(bigBuf2));
                             memset(charHighScore,0,sizeof(charHighScore));
                             printf("HIGSCORE LIST:");
                             for(int i = 0; i < savedScores; i++)
                             {
-                                bufString = "Score: " + std::to_string(scoreList[i].winnerScore) + " - " + std::to_string(scoreList[i].looseScore) + "\n";
+                                bufString = "Score: " + std::to_string(scoreList[i].winnerScore) + " - " + std::to_string(scoreList[i].looseScore) + "\nWinner time: " + std::to_string(scoreList[i].deltaTimeWinner) + "\n";
                                 tempString += bufString;
                             }
                             std::cout << tempString << std::endl;
@@ -638,11 +641,11 @@ int main(int argc, char *argv[])
                        
                     }
                     else if(strcmp(operation, "ROUND") == 0)
-                    {
+                    {                        
                         sscanf(buf,"%s %d %lf",operation, &answer, &tempDouble);
                         for(int j = 0; j < gameCounter; j++)
                         {
-                            printf("for loop test\n");
+                            
                             if(games[j].sockNr1 == i)
                             {
                                 printf("socket1 answer saved\n");
@@ -713,7 +716,12 @@ int main(int argc, char *argv[])
                                         games[j].sockNr2 = -1; 
                                         //SaveHighScore
                                         scoreList[savedScores].looseScore = games[j].score2;
-                                        scoreList[savedScores++].winnerScore = games[j].score1;                                        
+                                        
+                                        scoreList[savedScores].winnerScore = games[j].score1;
+                                        scoreList[savedScores].deltaTimeWinner = (games[j].timeTaken1/(double)games[j].roundNr);
+
+                                        //printf("all time combined winner: %8.8g/nfinal deltatime for winner = %8.8g", games[j].timeTaken1,scoreList[savedScores].deltaTimeWinner);
+                                        savedScores++;
                                         fflush(stdout);
                                     }
                                     else
@@ -808,7 +816,10 @@ int main(int argc, char *argv[])
                                         games[j].sockNr2 = -1;
                                         // Save highscore                                        
                                         scoreList[savedScores].looseScore = games[j].score1;
-                                        scoreList[savedScores++].winnerScore = games[j].score2;
+                                        scoreList[savedScores].winnerScore = games[j].score2;
+                                        scoreList[savedScores].deltaTimeWinner = (games[j].timeTaken2/(double)games[j].roundNr);
+                                        //printf("all time combined winner: %8.8g/nfinal deltatime for winner = %8.8g", games[j].timeTaken2,scoreList[savedScores].deltaTimeWinner);
+                                        savedScores++;
                                         fflush(stdout);
 
                                     }
@@ -907,8 +918,7 @@ int main(int argc, char *argv[])
                                 }
                                 
                                 if(games[j].sockNr1 != 3 || games[j].score2 != 3)
-                                {
-                                    printf("HERE\n");
+                                {                                    
                                     sendTimingMsg(j);
                                 }                                
                             }
