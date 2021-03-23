@@ -116,7 +116,23 @@ int main(int argc, char *argv[])
         fflush(stdin);
         if(FD_ISSET(STDIN_FILENO,&readfds))
         {           
-            
+            if(isWatching == true)
+            {
+                memset(inputMsg,0,sizeof(inputMsg));
+                fgets(inputMsg, 256, stdin);
+
+                if(strcmp(inputMsg,"\n") == 0)
+                {
+                    isWatching = false;
+                    sendValue = send(clientSocket, stopWatching, strlen(stopWatching), 0);
+                
+                    if (sendValue == -1) 
+                    {
+                        perror("sendto:");
+                        exit(4);
+                    }                                        
+                }
+            }
             if(strcmp(command,"MENU") == 0)
             {    
                 memset(inputMsg,0,sizeof(inputMsg));

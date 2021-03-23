@@ -225,6 +225,25 @@ int rockPapperScissors(int index)
     return winner;
 }
 
+
+void sortHighscore(int nrOf)
+{
+    for(int i = 0; i < nrOf - 1; i++)
+    {
+        for(int j = 0; j < nrOf - i - 1; j++)
+        {
+            if(scoreList[j].deltaTimeWinner > scoreList[j+1].deltaTimeWinner)
+            {
+                highscore temp = scoreList[j];                
+                scoreList[j] = scoreList[j+1];
+                scoreList[j+1] = temp;
+            }
+        }
+    }
+}
+
+
+
 int main(int argc, char *argv[])
 {
 
@@ -284,11 +303,12 @@ int main(int argc, char *argv[])
     int yes = 1;
     int recivedValue;
     int sendValue;
+    int savedScores = 0;
     int choice = 0;
     int answer = 0;
     int winner = 0;
     int gameToWatch = 0;
-    int savedScores = 0;
+    
     int removedIndex = -1;
     double tempDouble = 0.0f; 
     FD_ZERO(&master);
@@ -541,16 +561,21 @@ int main(int argc, char *argv[])
                             /*
                             scoreList[0].looseScore = 1;
                             scoreList[0].winnerScore = 3;
-                            scoreList[0].deltaTimeWinner = 1.45;
+                            scoreList[0].deltaTimeWinner = 2.45;
                             scoreList[1].looseScore = 2;
                             scoreList[1].winnerScore = 3;
                             scoreList[1].deltaTimeWinner = 1.65;
-                            savedScores = 2;
+                            scoreList[2].deltaTimeWinner = 2.36;
+                            scoreList[2].looseScore = 2;
+                            scoreList[2].winnerScore = 3;
+                            savedScores = 3;
                             */
-
+                            
+                            sortHighscore(savedScores);
 
                             memset(bigBuf2,0,sizeof(bigBuf2));
                             memset(charHighScore,0,sizeof(charHighScore));
+
                             printf("HIGSCORE LIST:");
                             for(int i = 0; i < savedScores; i++)
                             {
@@ -567,7 +592,7 @@ int main(int argc, char *argv[])
                             {
                                 printf("Error sending hello msg\n");
                                 //close(acceptFd);
-                                break;
+
                             }
                             printf("send MSG = %s size%d\n",bigBuf2, sendValue);
 
@@ -587,8 +612,8 @@ int main(int argc, char *argv[])
                         if(sendValue < 0)
                         {
                             printf("Error sending hello msg\n");
-                            //close(acceptFd);
-                            break;
+                            FD_CLR(i,&master);
+                            
                         }
                     }
                     else if(strcmp(operation, "STOPW") == 0)
@@ -621,9 +646,9 @@ int main(int argc, char *argv[])
                         sendValue = send(i,choose,strlen(choose),0);
                         if(sendValue < 0)
                         {
-                            printf("Error sending hello msg\n");
+                            printf("Error choose hello msg\n");
                             //close(acceptFd);
-                            break;
+                            FD_CLR(i,&master);
                         }
                         fflush(stdout);
 
@@ -637,7 +662,7 @@ int main(int argc, char *argv[])
                         {
                             printf("Error sending hello msg\n");
                             //close(acceptFd);
-                            break;
+                            FD_CLR(i,&master);
                         }
                     }
                     else if(strcmp(operation, "WATCH") == 0)
@@ -648,7 +673,7 @@ int main(int argc, char *argv[])
                         int tempCounter = 0;
                         for(int j = 0; j < gameCounter; j++)
                         {
-                            if(games[j].started == true)
+                            if(games[j].started == true && games[j].concluded != true)
                             {
                                 tempCounter++;
                             }
@@ -676,7 +701,7 @@ int main(int argc, char *argv[])
                             {
                                 games[j].socket1Ready = true;
                              
-                            }                                                       
+                            }                                                   
                         }
                         for(int j = 0; j < gameCounter; j++)
                         {
