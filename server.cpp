@@ -32,6 +32,7 @@ struct activeGames
     bool bothAnswered;
     int watching[100];
     int nrOfWatching;
+    bool gameInterupted;
 };
 
 activeGames games[100];
@@ -64,7 +65,8 @@ void fill()
         games[i].choice1 = 0;
         games[i].choice2 = 0;
         games[i].bothAnswered = false;
-        games[i].nrOfWatching = 0;       
+        games[i].nrOfWatching = 0;  
+        games[i].gameInterupted = false;     
         for(int j = 0; j < 100; j++)
         {
             games[i].watching[j] = -1;
@@ -91,7 +93,7 @@ void sendTimingMsg(int arrayIndex)
     int sendValue = 0;
     int sendValue2 = 0;
     
-    printf("seconds to count = %d\n",games[arrayIndex].secondsToCount);
+    //printf("seconds to count = %d\n",games[arrayIndex].secondsToCount);
     if(games[arrayIndex].secondsToCount == 0)
     {
         games[arrayIndex].roundNr++;
@@ -99,18 +101,18 @@ void sendTimingMsg(int arrayIndex)
         sendValue = send(games[arrayIndex].sockNr1,roundMsg,strlen(roundMsg),0);
         if(sendValue < 0)
         {
-            printf("Error sending hello msg\n");                                    
+            printf("Error sending timing1 msg\n");                                    
             exit(3);
         }
         
         fflush(stdout);
         sendValue2 = send(games[arrayIndex].sockNr2,roundMsg,strlen(roundMsg),0);
-        if(sendValue < 0)
+        if(sendValue2 < 0)
         {
-            printf("Error sending hello msg\n");                                    
+            printf("Error sending timing2 msg\n");                                    
             exit(3);
         }        
-        printf("efter båda skickas\n");
+        //printf("efter båda skickas\n");
         fflush(stdout);
         games[arrayIndex].isAnswering = true;
         for(int i = 0; i < games[arrayIndex].nrOfWatching; i++)
@@ -122,7 +124,7 @@ void sendTimingMsg(int arrayIndex)
                 printf("Error sending hello msg\n");                                    
                 exit(4);
             }
-            printf("sendbytes1: %d\n", sendValue);
+            //printf("sendbytes1: %d\n", sendValue);
             fflush(stdout);
         }
     }
@@ -132,19 +134,19 @@ void sendTimingMsg(int arrayIndex)
         sendValue = send(games[arrayIndex].sockNr1,timeMsg,strlen(timeMsg),0);
         if(sendValue < 0)
         {
-            printf("Error sending hello msg\n");                                    
+            printf("Error sending timing1  msg\n");                                    
             exit(4);
         }
-        printf("sendbytes1: %d\n", sendValue);
+        //printf("sendbytes1: %d\n", sendValue);
         fflush(stdout);
         sendValue2 = send(games[arrayIndex].sockNr2,timeMsg,strlen(timeMsg),0);
-        if(sendValue < 0)
+        if(sendValue2 < 0)
         {
-            printf("Error sending hello msg\n");                                    
+            printf("Error sending timing2 msg\n");                                    
             exit(4);
         }
-        printf("sendbytes2: %d\n", sendValue2);
-        printf("efter båda skickas\n");
+        //printf("sendbytes2: %d\n", sendValue2);
+        //printf("efter båda skickas\n");
         
         fflush(stdout);
 
@@ -157,7 +159,7 @@ void sendTimingMsg(int arrayIndex)
                 printf("Error sending hello msg\n");                                    
                 exit(4);
             }
-            printf("sendbytes1: %d\n", sendValue);
+            //printf("sendbytes1: %d\n", sendValue);
             fflush(stdout);
         }
         games[arrayIndex].secondsToCount--;
@@ -287,6 +289,7 @@ int main(int argc, char *argv[])
     int winner = 0;
     int gameToWatch = 0;
     int savedScores = 0;
+    int removedIndex = -1;
     double tempDouble = 0.0f; 
     FD_ZERO(&master);
     FD_ZERO(&read_fds);
@@ -397,8 +400,57 @@ int main(int argc, char *argv[])
                     {
                         if(recivedValue == 0)
                         {
+                            removedIndex = -1;
                             close(i);
                             FD_CLR(i,&master);
+
+                            for(int j = 0; j < gameCounter; j++)
+                            {
+                                if(games[j].sockNr1 == i || games[j].sockNr2 == i)
+                                {
+                                    removedIndex = games[j].index;
+                                }
+                            }
+
+                            if(games[removedIndex].started == true && removedIndex != -1)
+                            {
+                                if(i == games[removedIndex].sockNr1)
+                                {                                
+                                    sendValue = send(games[removedIndex].sockNr2,menuMsg,sizeof(menuMsg),0);
+                                    if(sendValue < 0)
+                                    {
+                                        printf("Error sending hello msg\n");
+                                        //close(acceptFd);
+                                        continue;
+                                    }
+                                }
+                                else 
+                                {
+                                    sendValue = send(games[removedIndex].sockNr1,menuMsg,sizeof(menuMsg),0);
+                                    if(sendValue < 0)
+                                    {
+                                        printf("Error sending hello msg\n");                                        
+                                        continue;
+                                    }
+                                }
+                                for(int j = 0; j < games[removedIndex].nrOfWatching; j++)
+                                {
+                                    sendValue = send(games[removedIndex].watching[j],menuMsg,sizeof(menuMsg),0);
+                                    if(sendValue < 0)
+                                    {
+                                        printf("Error sending hello msg\n");
+                                        //close(acceptFd);
+                                        break;
+                                    }
+                                }
+
+                                games[removedIndex].sockNr1 = -1;
+                                games[removedIndex].sockNr2 = -1;
+                                games[removedIndex].concluded = true;
+                                games[removedIndex].secondsToCount = -1;
+                                games[removedIndex].gameInterupted = true;
+                                
+                            }
                         
                         }
                         else if(recivedValue == -1)
@@ -406,7 +458,6 @@ int main(int argc, char *argv[])
                             close(i);
                             FD_CLR(i,&master);
                         }
-
                     }
                     printf("recived msg: %s",buf);
                     sscanf(buf,"%s",operation);
@@ -427,7 +478,7 @@ int main(int argc, char *argv[])
                                 sendValue = send(games[gameCounter].sockNr1,gameStartingMsg,strlen(gameStartingMsg),0);
                                 if(sendValue < 0)
                                 {
-                                    printf("Error sending hello msg\n");
+                                    printf("Error sending  game starting socknr1 msg\n");
                                     //close(acceptFd);
                                     break;
                                 }                                    
@@ -435,13 +486,14 @@ int main(int argc, char *argv[])
                                 sendValue = send(games[gameCounter].sockNr2,gameStartingMsg,strlen(gameStartingMsg),0);
                                 if(sendValue < 0)
                                 {
-                                    printf("Error sending hello msg\n");
+                                    printf("Error sending game starting socknr2 msg\n");
                                     //close(acceptFd);
                                     break;
                                 }                                                                       
                                 
                                 games[gameCounter].index = gameCounter;                             
-                                gameCounter++;                            
+                                gameCounter++;
+                                                          
                                 
                             }
                             else
@@ -450,7 +502,7 @@ int main(int argc, char *argv[])
                                 sendValue = send(i,waitingForPlayer,strlen(waitingForPlayer),0);
                                 if(sendValue < 0)
                                 {
-                                    printf("Error sending hello msg\n");
+                                    printf("Error sending waiting for player socknr1 msg\n");
                                     //close(acceptFd);
                                     break;
                                 }
@@ -466,7 +518,7 @@ int main(int argc, char *argv[])
                             printf("Watch\n");
                             for(int j = 0; j < gameCounter; j++)
                             {
-                                if(games[j].started == true)
+                                if(games[j].started == true && games[j].concluded == false && games[j].gameInterupted == false)
                                 {
                                     tempCounter++;
                                 }                                
@@ -523,7 +575,7 @@ int main(int argc, char *argv[])
                         }
                         else
                         {
-                            //Should not get here klient wont let it through until 1 or 2
+                            //Should not get here client wont let it through until 1 or 2
                             printf("Bad nr\n");
                         }
                     }
@@ -537,7 +589,7 @@ int main(int argc, char *argv[])
                             printf("Error sending hello msg\n");
                             //close(acceptFd);
                             break;
-                        }                        
+                        }
                     }
                     else if(strcmp(operation, "STOPW") == 0)
                     {
@@ -628,13 +680,12 @@ int main(int argc, char *argv[])
                         }
                         for(int j = 0; j < gameCounter; j++)
                         {
-                            if(games[j].socket1Ready == true && games[j].socket2Ready == true && games[j].started != true)
+                            if(games[j].socket1Ready == true && games[j].socket2Ready == true && games[j].started != true && games[j].concluded != true)
                             {
                                 // Starta spelet
                                 printf("Båda klienter redo!\n");  
                                 games[j].started = true;                                                            
-                                sendTimingMsg(j);
-                                
+                                sendTimingMsg(j);                                
                                 fflush(stdout);      
                             }
                         }
@@ -659,12 +710,13 @@ int main(int argc, char *argv[])
                             {
                                 printf("socket2 answer saved\n");
                                 games[j].choice2 = answer;
+
                                 printf("Time taken %8.8g\n",tempDouble);
                                 games[j].timeTaken2 += tempDouble;
                                 tempDouble = 0.0f;
                                 answer = 0;
                             }
-                            if(games[j].choice1 != 0 && games[j].choice2 != 0)
+                            if(games[j].choice1 != 0 && games[j].choice2 != 0 && games[j].concluded != true)
                             {
                                 printf("Both answerd\n");
                                 winner = rockPapperScissors(j);
@@ -672,8 +724,7 @@ int main(int argc, char *argv[])
                                 if(winner == 1)
                                 {
                                     
-                                    //sock 1 winner
-                                                                        
+                                    //sock 1 winner                                                                        
                                     games[j].score1++;
                                     if(games[j].score1 == 3)
                                     {
@@ -713,12 +764,15 @@ int main(int argc, char *argv[])
                                         }
                                         
                                         games[j].sockNr1 = -1;
-                                        games[j].sockNr2 = -1; 
-                                        //SaveHighScore
-                                        scoreList[savedScores].looseScore = games[j].score2;
+                                        games[j].sockNr2 = -1;
+                                        games[j].started = false;
                                         
+                                        //SaveHighScore
+
+                                        scoreList[savedScores].looseScore = games[j].score2;                                        
                                         scoreList[savedScores].winnerScore = games[j].score1;
                                         scoreList[savedScores].deltaTimeWinner = (games[j].timeTaken1/(double)games[j].roundNr);
+                                        
 
                                         //printf("all time combined winner: %8.8g/nfinal deltatime for winner = %8.8g", games[j].timeTaken1,scoreList[savedScores].deltaTimeWinner);
                                         savedScores++;
@@ -765,8 +819,11 @@ int main(int argc, char *argv[])
                                         games[j].choice2 = 0;
                                         
                                         games[j].secondsToCount = 3;
+                                        gettimeofday(&games[j].time,NULL);
                                         games[j].isAnswering = false;
                                         fflush(stdout);
+                                        
+                                        //sendTimingMsg(j);
                                     }
                                 }
                                 else if(winner == 2)
@@ -788,6 +845,7 @@ int main(int argc, char *argv[])
                                             exit(4);
                                         }
                                         fflush(stdout);
+
                                         memset(win,0,sizeof(win));                                 
                                         sprintf(win,"WIN %d %d\n",games[j].score2,games[j].score1);
                                         
@@ -814,18 +872,19 @@ int main(int argc, char *argv[])
 
                                         games[j].sockNr1 = -1;
                                         games[j].sockNr2 = -1;
-                                        // Save highscore                                        
+                                        games[j].started = false;
+                                        
+                                        //Save highscore                                        
                                         scoreList[savedScores].looseScore = games[j].score1;
                                         scoreList[savedScores].winnerScore = games[j].score2;
                                         scoreList[savedScores].deltaTimeWinner = (games[j].timeTaken2/(double)games[j].roundNr);
-                                        //printf("all time combined winner: %8.8g/nfinal deltatime for winner = %8.8g", games[j].timeTaken2,scoreList[savedScores].deltaTimeWinner);
+                                        //printf("all time combined winner: %8.8g /nfinal deltatime for winner = %8.8g", games[j].timeTaken2,scoreList[savedScores].deltaTimeWinner);
                                         savedScores++;
                                         fflush(stdout);
 
                                     }
                                     else
-                                    {
-                                        
+                                    {                                        
                                         printf("sock 2 won\n");
                                         
                                         memset(roundF,0,sizeof(roundF));
@@ -867,7 +926,10 @@ int main(int argc, char *argv[])
                                         games[j].choice2 = 0;
                                         
                                         games[j].secondsToCount = 3;
+                                        gettimeofday(&games[j].time,NULL);
                                         games[j].isAnswering = false;
+                                        //sleep(1);
+                                        //sendTimingMsg(j);
 
                                     }                                 
                                     
@@ -911,16 +973,12 @@ int main(int argc, char *argv[])
 
                                     games[j].choice1 = 0;
                                     games[j].choice2 = 0;
-                                    
+                                    gettimeofday(&games[j].time,NULL);
                                     games[j].secondsToCount = 3;
                                     games[j].isAnswering = false;
-                                    fflush(stdout);
+                                    fflush(stdout);                                    
                                 }
-                                
-                                if(games[j].sockNr1 != 3 || games[j].score2 != 3)
-                                {                                    
-                                    sendTimingMsg(j);
-                                }                                
+                                                           
                             }
                         }                        
                     }
@@ -934,7 +992,7 @@ int main(int argc, char *argv[])
                     gettimeofday(&comparetime,NULL);
                     if((comparetime.tv_sec - games[i].time.tv_sec) > 1 && games[i].started == true && games[i].isAnswering == false && games[i].concluded == false)
                     {                
-                        if(games[i].score1 != 3 || games[i].score2 != 3)
+                        if(games[i].score1 != 3 && games[i].score2 != 3)
                         {
                             
                             sendTimingMsg(i);

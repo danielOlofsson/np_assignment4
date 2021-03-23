@@ -229,7 +229,7 @@ int main(int argc, char *argv[])
 
                         sendTime = (seconds + microSeconds/1000000.0);
 
-                        printf("sendtime = %8.8f",sendTime);
+                        //printf("sendtime = %8.8f",sendTime);
                         if(strcmp(inputMsg, "1\n") == 0)
                         {
                             
