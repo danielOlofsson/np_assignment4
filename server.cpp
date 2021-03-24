@@ -423,9 +423,20 @@ int main(int argc, char *argv[])
                             removedIndex = -1;
                             close(i);
                             FD_CLR(i,&master);
-
+                            if(nrOfPlayers % 2 == 1)
+                            {
+                                nrOfPlayers--;        
+                            }
                             for(int j = 0; j < gameCounter; j++)
                             {
+                                for(int k = 0; k < games[j].nrOfWatching; k++)
+                                {
+                                    if(games[j].watching[k] == i)
+                                    {
+                                        games[j].watching[k] = games[j].watching[games[j].nrOfWatching];
+                                        games[j].nrOfWatching--;
+                                    }
+                                }
                                 if(games[j].sockNr1 == i || games[j].sockNr2 == i)
                                 {
                                     removedIndex = games[j].index;
@@ -434,42 +445,49 @@ int main(int argc, char *argv[])
 
                             if(games[removedIndex].started == true && removedIndex != -1)
                             {
-                                if(i == games[removedIndex].sockNr1)
-                                {                                
-                                    sendValue = send(games[removedIndex].sockNr2,menuMsg,sizeof(menuMsg),0);
-                                    if(sendValue < 0)
-                                    {
-                                        printf("Error sending hello msg\n");
-                                        //close(acceptFd);
-                                        continue;
-                                    }
-                                }
-                                else 
+                                if(i == games[removedIndex].sockNr1 || i == games[removedIndex].sockNr2)
                                 {
-                                    sendValue = send(games[removedIndex].sockNr1,menuMsg,sizeof(menuMsg),0);
-                                    if(sendValue < 0)
-                                    {
-                                        printf("Error sending hello msg\n");                                        
-                                        continue;
-                                    }
-                                }
-                                for(int j = 0; j < games[removedIndex].nrOfWatching; j++)
-                                {
-                                    sendValue = send(games[removedIndex].watching[j],menuMsg,sizeof(menuMsg),0);
-                                    if(sendValue < 0)
-                                    {
-                                        printf("Error sending hello msg\n");
-                                        //close(acceptFd);
-                                        break;
-                                    }
-                                }
-
-                                games[removedIndex].sockNr1 = -1;
-                                games[removedIndex].sockNr2 = -1;
-                                games[removedIndex].concluded = true;
-                                games[removedIndex].secondsToCount = -1;
-                                games[removedIndex].gameInterupted = true;
                                 
+                                    if(i == games[removedIndex].sockNr1)
+                                    {                                
+                                        sendValue = send(games[removedIndex].sockNr2,menuMsg,sizeof(menuMsg),0);
+                                        if(sendValue < 0)
+                                        {
+                                            printf("Error sending hello msg\n");
+                                            //close(acceptFd);
+                                            continue;
+                                        }
+                                    }
+                                    else if(i == games[removedIndex].sockNr2)
+                                    {
+                                        sendValue = send(games[removedIndex].sockNr1,menuMsg,sizeof(menuMsg),0);
+                                        if(sendValue < 0)
+                                        {
+                                            printf("Error sending hello msg\n");                                        
+                                            continue;
+                                        }
+                                    }
+                                    for(int j = 0; j < games[removedIndex].nrOfWatching; j++)
+                                    {
+                                        sendValue = send(games[removedIndex].watching[j],menuMsg,sizeof(menuMsg),0);
+                                        if(sendValue < 0)
+                                        {
+                                            printf("Error sending hello msg\n");
+                                            //close(acceptFd);
+                                            break;
+                                        }
+                                    }
+
+                                    games[removedIndex].sockNr1 = -1;
+                                    games[removedIndex].sockNr2 = -1;
+                                    games[removedIndex].concluded = true;
+                                    games[removedIndex].secondsToCount = -1;
+                                    games[removedIndex].gameInterupted = true;
+                                }
+                                else
+                                {                                    
+                                    printf("Watching disconnected");                                   
+                                }
                             }
                         
                         }
